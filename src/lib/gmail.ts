@@ -2,13 +2,53 @@ import { google } from "googleapis";
 import { AmazonEmail } from "./types";
 import { withRetry } from "./retry";
 
-const AMAZON_SENDERS = [
+const AMAZON_SENDERS_JP = [
   "auto-confirm@amazon.co.jp",
   "ship-confirm@amazon.co.jp",
   "order-update@amazon.co.jp",
 ];
 
-const AMAZON_QUERY = AMAZON_SENDERS.map((s) => `from:${s}`).join(" OR ");
+const AMAZON_SENDERS_US = [
+  "auto-confirm@amazon.com",
+  "ship-confirm@amazon.com",
+  "order-update@amazon.com",
+];
+
+export type AmazonRegion = "jp" | "us" | "all";
+
+function getSendersForRegion(region: AmazonRegion): string[] {
+  switch (region) {
+    case "jp":
+      return AMAZON_SENDERS_JP;
+    case "us":
+      return AMAZON_SENDERS_US;
+    case "all":
+      return [...AMAZON_SENDERS_JP, ...AMAZON_SENDERS_US];
+  }
+}
+
+export interface GmailDateFilter {
+  after?: string; // YYYY-MM-DD
+  before?: string; // YYYY-MM-DD
+}
+
+function buildAmazonQuery(
+  region: AmazonRegion = "jp",
+  dateFilter?: GmailDateFilter
+): string {
+  const senders = getSendersForRegion(region);
+  let query = senders.map((s) => `from:${s}`).join(" OR ");
+
+  if (dateFilter?.after) {
+    // Gmail expects after:YYYY/MM/DD
+    query += ` after:${dateFilter.after.replace(/-/g, "/")}`;
+  }
+  if (dateFilter?.before) {
+    query += ` before:${dateFilter.before.replace(/-/g, "/")}`;
+  }
+
+  return query;
+}
 
 /** 並列取得の最大同時実行数 */
 const MAX_CONCURRENCY = 5;
@@ -63,18 +103,22 @@ async function runWithConcurrency<T>(
 export async function getAmazonEmails(
   accessToken: string,
   maxResults: number = 20,
-  pageToken?: string
+  pageToken?: string,
+  region: AmazonRegion = "jp",
+  dateFilter?: GmailDateFilter
 ): Promise<GetAmazonEmailsResult> {
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
 
   const gmail = google.gmail({ version: "v1", auth });
 
+  const query = buildAmazonQuery(region, dateFilter);
+
   const listResponse = await withRetry(
     () =>
       gmail.users.messages.list({
         userId: "me",
-        q: AMAZON_QUERY,
+        q: query,
         maxResults,
         pageToken,
       }),

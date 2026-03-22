@@ -1,12 +1,19 @@
 "use client";
 
 import { useSession, signIn } from "next-auth/react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Header from "@/components/Header";
 import EmailList from "@/components/EmailList";
-import OrderTable from "@/components/OrderTable";
+import SortableTable from "@/components/SortableTable";
+import ProgressBar from "@/components/ProgressBar";
+import DateRangeFilter from "@/components/DateRangeFilter";
+import SearchFilter from "@/components/SearchFilter";
+import ExportHistory from "@/components/ExportHistory";
+import CsvDownloadButton from "@/components/CsvDownloadButton";
 import { EmailListSkeleton, OrderTableSkeleton } from "@/components/SkeletonLoader";
 import { AmazonEmail, AnalysisResult, ParsedOrder } from "@/lib/types";
+import { addExportHistory } from "@/lib/export-history";
+import type { AmazonRegion } from "@/lib/gmail";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -17,12 +24,37 @@ export default function Home() {
   const [loadingPhase, setLoadingPhase] = useState<"emails" | "analyze" | null>(null);
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(null);
   const [spreadsheetId, setSpreadsheetId] = useState("");
+  const [analyzeProgress, setAnalyzeProgress] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  });
+
+  // 日付フィルタ
+  const [dateAfter, setDateAfter] = useState("");
+  const [dateBefore, setDateBefore] = useState("");
+
+  // 検索キーワードフィルタ
+  const [searchKeyword, setSearchKeyword] = useState("");
+
+  // リージョン選択
+  const [region, setRegion] = useState<AmazonRegion>("jp");
+
+  // エクスポート履歴リフレッシュ用
+  const [historyKey, setHistoryKey] = useState(0);
 
   const fetchEmails = useCallback(async () => {
     setLoading("メールを取得中...");
     setLoadingPhase("emails");
     try {
-      const res = await fetch("/api/gmail");
+      const params = new URLSearchParams();
+      if (dateAfter) params.set("after", dateAfter);
+      if (dateBefore) params.set("before", dateBefore);
+      if (region !== "jp") params.set("region", region);
+
+      const queryString = params.toString();
+      const url = `/api/gmail${queryString ? `?${queryString}` : ""}`;
+
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch emails");
       const data = await res.json();
       setEmails(data.emails);
@@ -34,7 +66,7 @@ export default function Home() {
       setLoading(null);
       setLoadingPhase(null);
     }
-  }, []);
+  }, [dateAfter, dateBefore, region]);
 
   const analyzeEmails = useCallback(async () => {
     const selected = emails.filter((e) => selectedIds.has(e.id));
@@ -46,6 +78,7 @@ export default function Home() {
     setLoading(`${selected.length}件のメールを解析中...`);
     setLoadingPhase("analyze");
     setResults([]);
+    setAnalyzeProgress({ current: 0, total: selected.length });
 
     const newResults: AnalysisResult[] = [];
     for (const email of selected) {
@@ -66,6 +99,7 @@ export default function Home() {
         });
       }
       setResults([...newResults]);
+      setAnalyzeProgress({ current: newResults.length, total: selected.length });
     }
     setLoading(null);
     setLoadingPhase(null);
@@ -94,6 +128,15 @@ export default function Home() {
       const data = await res.json();
       setSpreadsheetUrl(data.url);
       if (!spreadsheetId) setSpreadsheetId(data.spreadsheetId);
+
+      // エクスポート履歴を保存
+      addExportHistory({
+        spreadsheetUrl: data.url,
+        spreadsheetId: data.spreadsheetId,
+        orderCount: orders.length,
+      });
+      setHistoryKey((prev) => prev + 1);
+
       alert(`${data.updatedRows}行をエクスポートしました`);
     } catch (error) {
       console.error(error);
@@ -120,22 +163,60 @@ export default function Home() {
     }
   };
 
+  const handleDateApply = useCallback((after: string, before: string) => {
+    setDateAfter(after);
+    setDateBefore(before);
+  }, []);
+
+  const handleSearch = useCallback((keyword: string) => {
+    setSearchKeyword(keyword);
+  }, []);
+
+  // 検索キーワードで解析結果をフィルタ
+  const filteredResults = useMemo(() => {
+    if (!searchKeyword.trim()) return results;
+    const kw = searchKeyword.toLowerCase();
+    return results.filter((r) => {
+      if (!r.order) return false;
+      const order = r.order;
+      // 商品名で検索
+      if (order.items.some((item) => item.name.toLowerCase().includes(kw))) {
+        return true;
+      }
+      // 注文番号で検索
+      if (order.orderNumber.toLowerCase().includes(kw)) return true;
+      // 金額で検索
+      if (String(order.totalAmount).includes(kw)) return true;
+      if (order.items.some((item) => String(item.price).includes(kw))) {
+        return true;
+      }
+      return false;
+    });
+  }, [results, searchKeyword]);
+
+  // CSV用の注文データ
+  const exportableOrders = useMemo(() => {
+    return filteredResults
+      .filter((r) => r.order)
+      .map((r) => r.order as ParsedOrder);
+  }, [filteredResults]);
+
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500">読み込み中...</p>
+      <div className="flex min-h-screen items-center justify-center dark:bg-gray-950">
+        <p className="text-gray-500 dark:text-gray-400">読み込み中...</p>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4 dark:bg-gray-950">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Amazon 経費管理
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-sm text-gray-600 sm:text-base dark:text-gray-400">
             Amazonの注文確認メールから経費情報を自動抽出し、
             <br />
             Google Sheetsに記録します
@@ -143,7 +224,7 @@ export default function Home() {
         </div>
         <button
           onClick={() => signIn("google")}
-          className="flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-medium shadow-md hover:shadow-lg"
+          className="flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-medium shadow-md hover:shadow-lg dark:bg-gray-800 dark:text-gray-200 dark:shadow-gray-900 dark:hover:bg-gray-700"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path
@@ -170,29 +251,63 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto max-w-5xl px-4 py-4 sm:py-6">
         {loading && (
-          <div className="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-            {loading}
+          <div className="mb-4 space-y-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            <p>{loading}</p>
+            {loadingPhase === "analyze" && analyzeProgress.total > 0 && (
+              <ProgressBar
+                current={analyzeProgress.current}
+                total={analyzeProgress.total}
+                label="解析進捗"
+              />
+            )}
           </div>
         )}
 
         {/* Step 1: Fetch Emails */}
-        <section className="mb-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <section className="mb-4 sm:mb-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-base font-semibold text-gray-900 sm:text-lg dark:text-gray-100">
               1. Amazon メールを取得
             </h2>
             <button
               onClick={fetchEmails}
               disabled={!!loading}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded-md bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto sm:py-2 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               メールを取得
             </button>
           </div>
+
+          {/* フィルタパネル */}
+          <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+              <div>
+                <label
+                  htmlFor="region-select"
+                  className="block text-xs font-medium text-gray-600 dark:text-gray-400"
+                >
+                  リージョン
+                </label>
+                <select
+                  id="region-select"
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value as AmazonRegion)}
+                  disabled={!!loading}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                >
+                  <option value="jp">Amazon.co.jp</option>
+                  <option value="us">Amazon.com</option>
+                  <option value="all">すべて</option>
+                </select>
+              </div>
+              <DateRangeFilter onApply={handleDateApply} disabled={!!loading} />
+            </div>
+          </div>
+
           {loadingPhase === "emails" && emails.length === 0 && (
             <div className="mt-3">
               <EmailListSkeleton />
@@ -212,27 +327,45 @@ export default function Home() {
 
         {/* Step 2: Analyze */}
         {emails.length > 0 && (
-          <section className="mb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <section className="mb-4 sm:mb-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-base font-semibold text-gray-900 sm:text-lg dark:text-gray-100">
                 2. AI解析で注文情報を抽出
               </h2>
               <button
                 onClick={analyzeEmails}
                 disabled={!!loading || selectedIds.size === 0}
-                className="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                className="w-full rounded-md bg-green-600 px-4 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50 sm:w-auto sm:py-2 dark:bg-green-500 dark:hover:bg-green-600"
               >
                 選択したメールを解析 ({selectedIds.size}件)
               </button>
             </div>
+
+            {/* 解析結果の検索フィルタ */}
+            {results.length > 0 && (
+              <div className="mt-3">
+                <SearchFilter onSearch={handleSearch} disabled={!!loading} />
+              </div>
+            )}
+
             {loadingPhase === "analyze" && results.length === 0 && (
               <div className="mt-3">
                 <OrderTableSkeleton />
               </div>
             )}
-            {results.length > 0 && (
+            {filteredResults.length > 0 && (
               <div className="mt-3">
-                <OrderTable results={results} />
+                <SortableTable results={filteredResults} />
+                {searchKeyword && (
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    {filteredResults.length}/{results.length}件の結果を表示中
+                  </p>
+                )}
+              </div>
+            )}
+            {searchKeyword && filteredResults.length === 0 && results.length > 0 && (
+              <div className="mt-3 rounded-lg border border-gray-200 p-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                検索条件に一致する結果がありません
               </div>
             )}
           </section>
@@ -240,35 +373,41 @@ export default function Home() {
 
         {/* Step 3: Export */}
         {results.some((r) => r.order) && (
-          <section className="mb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                3. スプレッドシートにエクスポート
+          <section className="mb-4 sm:mb-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-base font-semibold text-gray-900 sm:text-lg dark:text-gray-100">
+                3. エクスポート
               </h2>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   type="text"
                   placeholder="スプレッドシートID（空欄で新規作成）"
                   value={spreadsheetId}
                   onChange={(e) => setSpreadsheetId(e.target.value)}
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm sm:w-auto sm:py-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500"
                 />
-                <button
-                  onClick={exportToSheets}
-                  disabled={!!loading}
-                  className="rounded-md bg-orange-600 px-4 py-2 text-sm text-white hover:bg-orange-700 disabled:opacity-50"
-                >
-                  エクスポート
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={exportToSheets}
+                    disabled={!!loading}
+                    className="flex-1 rounded-md bg-orange-600 px-4 py-2.5 text-sm text-white hover:bg-orange-700 disabled:opacity-50 sm:flex-none sm:py-2 dark:bg-orange-500 dark:hover:bg-orange-600"
+                  >
+                    Sheetsエクスポート
+                  </button>
+                  <CsvDownloadButton
+                    orders={exportableOrders}
+                    disabled={!!loading}
+                  />
+                </div>
               </div>
             </div>
             {spreadsheetUrl && (
-              <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
+              <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-950">
                 <a
                   href={spreadsheetUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-green-700 hover:underline"
+                  className="text-sm text-green-700 hover:underline dark:text-green-400"
                 >
                   スプレッドシートを開く →
                 </a>
@@ -276,6 +415,11 @@ export default function Home() {
             )}
           </section>
         )}
+
+        {/* Export History */}
+        <section className="mb-4 sm:mb-6" key={historyKey}>
+          <ExportHistory />
+        </section>
       </main>
     </div>
   );
