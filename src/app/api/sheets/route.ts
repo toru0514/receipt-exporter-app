@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { exportToSheet, createSpreadsheet } from "@/lib/sheets";
 import { ParsedOrder } from "@/lib/types";
+import { rateLimit } from "@/lib/rate-limit";
+import { validateOrders, validateSpreadsheetId } from "@/lib/validation";
+
+// Sheets API: 1分あたり5リクエストまで
+const RATE_LIMIT_OPTIONS = { windowMs: 60_000, maxRequests: 5 };
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -9,20 +14,58 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const { orders, spreadsheetId } = (await request.json()) as {
-      orders: ParsedOrder[];
-      spreadsheetId?: string;
-    };
+  // レート制限チェック
+  const rateLimitKey = `sheets:${session.accessToken.slice(-16)}`;
+  const rl = rateLimit(rateLimitKey, RATE_LIMIT_OPTIONS);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)),
+          "X-RateLimit-Remaining": "0",
+        },
+      }
+    );
+  }
 
-    if (!orders || orders.length === 0) {
+  try {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "No orders to export" },
+        { error: "Invalid JSON body" },
         { status: 400 }
       );
     }
 
-    let targetSheetId = spreadsheetId;
+    const { orders, spreadsheetId } = body as {
+      orders?: unknown;
+      spreadsheetId?: unknown;
+    };
+
+    // 入力値バリデーション: orders
+    const ordersValidation = validateOrders(orders);
+    if (!ordersValidation.valid) {
+      return NextResponse.json(
+        { error: ordersValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // 入力値バリデーション: spreadsheetId
+    const sheetIdValidation = validateSpreadsheetId(spreadsheetId);
+    if (!sheetIdValidation.valid) {
+      return NextResponse.json(
+        { error: sheetIdValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const validatedOrders = orders as ParsedOrder[];
+    let targetSheetId = spreadsheetId as string | undefined;
     let sheetUrl: string | undefined;
 
     if (!targetSheetId) {
@@ -34,7 +77,7 @@ export async function POST(request: NextRequest) {
     const result = await exportToSheet(
       session.accessToken,
       targetSheetId,
-      orders
+      validatedOrders
     );
 
     return NextResponse.json({
