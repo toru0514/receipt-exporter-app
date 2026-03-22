@@ -17,16 +17,16 @@ export default function EmailList({
 }: EmailListProps) {
   if (emails.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+      <div className="rounded-lg border border-gray-200 p-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400">
         Amazonからの注文確認メールが見つかりませんでした
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-gray-200">
-      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
-        <label className="flex items-center gap-2 text-sm">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
+        <label className="flex items-center gap-2 text-sm dark:text-gray-300">
           <input
             type="checkbox"
             checked={selectedIds.size === emails.length}
@@ -36,7 +36,7 @@ export default function EmailList({
           すべて選択 ({selectedIds.size}/{emails.length})
         </label>
       </div>
-      <ul className="divide-y divide-gray-100">
+      <ul className="divide-y divide-gray-100 dark:divide-gray-700">
         {emails.map((email) => (
           <li key={email.id} className="flex items-start gap-3 px-4 py-3">
             <input
@@ -46,11 +46,11 @@ export default function EmailList({
               className="mt-1 rounded"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-gray-900">
+              <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                 {email.subject}
               </p>
-              <p className="mt-0.5 text-xs text-gray-500">{email.date}</p>
-              <p className="mt-1 truncate text-xs text-gray-400">
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{email.date}</p>
+              <p className="mt-1 truncate text-xs text-gray-400 dark:text-gray-500">
                 {email.snippet}
               </p>
             </div>

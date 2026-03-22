@@ -8,13 +8,27 @@ export const metadata: Metadata = {
     "Amazonの注文確認メールから経費情報を自動抽出し、Google Sheetsに記録するアプリ",
 };
 
+// フラッシュ防止: ページ読み込み時に即座にダークモードクラスを適用するインラインスクリプト
+const themeScript = `
+(function() {
+  try {
+    var t = localStorage.getItem('theme');
+    var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.classList.add('dark');
+  } catch(e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="antialiased">
         <SessionProvider>{children}</SessionProvider>
       </body>

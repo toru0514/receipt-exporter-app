@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getAmazonEmails } from "@/lib/gmail";
+import { getAmazonEmails, AmazonRegion } from "@/lib/gmail";
 import { rateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { errorTracker } from "@/lib/error-tracker";
@@ -45,7 +45,15 @@ export async function GET(request: NextRequest) {
   try {
     log.info("Fetching Amazon emails");
     const pageToken = request.nextUrl.searchParams.get("pageToken") ?? undefined;
-    const result = await getAmazonEmails(session.accessToken, 20, pageToken);
+    const after = request.nextUrl.searchParams.get("after") ?? undefined;
+    const before = request.nextUrl.searchParams.get("before") ?? undefined;
+    const regionParam = request.nextUrl.searchParams.get("region") ?? "jp";
+    const region: AmazonRegion = (["jp", "us", "all"].includes(regionParam)
+      ? regionParam
+      : "jp") as AmazonRegion;
+
+    const dateFilter = after || before ? { after, before } : undefined;
+    const result = await getAmazonEmails(session.accessToken, 20, pageToken, region, dateFilter);
     log.info("Emails fetched successfully", { count: result.emails.length });
     metrics.recordSuccess("/api/gmail");
     endRequest();
