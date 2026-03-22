@@ -23,6 +23,11 @@ vi.mock("googleapis", () => ({
   },
 }));
 
+// Mock retry to pass through without delay
+vi.mock("../retry", () => ({
+  withRetry: <T>(fn: () => Promise<T>) => fn(),
+}));
+
 function base64Encode(str: string): string {
   return Buffer.from(str, "utf-8").toString("base64");
 }
@@ -61,13 +66,13 @@ describe("getAmazonEmails", () => {
       })
     );
 
-    const emails = await getAmazonEmails("test-token", 10);
+    const result = await getAmazonEmails("test-token", 10);
 
-    expect(emails).toHaveLength(2);
-    expect(emails[0].id).toBe("msg1");
-    expect(emails[0].subject).toBe("Subject msg1");
-    expect(emails[0].body).toBe(htmlBody);
-    expect(emails[1].id).toBe("msg2");
+    expect(result.emails).toHaveLength(2);
+    expect(result.emails[0].id).toBe("msg1");
+    expect(result.emails[0].subject).toBe("Subject msg1");
+    expect(result.emails[0].body).toBe(htmlBody);
+    expect(result.emails[1].id).toBe("msg2");
   });
 
   it("メッセージが空の場合は空配列を返す", async () => {
@@ -75,8 +80,8 @@ describe("getAmazonEmails", () => {
       data: { messages: undefined },
     });
 
-    const emails = await getAmazonEmails("test-token");
-    expect(emails).toEqual([]);
+    const result = await getAmazonEmails("test-token");
+    expect(result.emails).toEqual([]);
   });
 
   it("multipart/alternative のメールからHTML本文を抽出する", async () => {
@@ -109,10 +114,10 @@ describe("getAmazonEmails", () => {
       },
     });
 
-    const emails = await getAmazonEmails("test-token");
+    const result = await getAmazonEmails("test-token");
 
-    expect(emails).toHaveLength(1);
-    expect(emails[0].body).toBe(htmlContent);
+    expect(result.emails).toHaveLength(1);
+    expect(result.emails[0].body).toBe(htmlContent);
   });
 
   it("ネストされたパーツからHTML本文を抽出する", async () => {
@@ -146,8 +151,8 @@ describe("getAmazonEmails", () => {
       },
     });
 
-    const emails = await getAmazonEmails("test-token");
-    expect(emails[0].body).toBe(htmlContent);
+    const result = await getAmazonEmails("test-token");
+    expect(result.emails[0].body).toBe(htmlContent);
   });
 
   it("Subjectヘッダーがない場合は(no subject)を返す", async () => {
@@ -165,8 +170,8 @@ describe("getAmazonEmails", () => {
       },
     });
 
-    const emails = await getAmazonEmails("test-token");
-    expect(emails[0].subject).toBe("(no subject)");
+    const result = await getAmazonEmails("test-token");
+    expect(result.emails[0].subject).toBe("(no subject)");
   });
 
   it("payloadがnullの場合はbodyが空文字になる", async () => {
@@ -181,8 +186,8 @@ describe("getAmazonEmails", () => {
       },
     });
 
-    const emails = await getAmazonEmails("test-token");
-    expect(emails[0].body).toBe("");
+    const result = await getAmazonEmails("test-token");
+    expect(result.emails[0].body).toBe("");
   });
 
   it("bodyデータがないパーツの場合はフォールバックする", async () => {
@@ -203,15 +208,75 @@ describe("getAmazonEmails", () => {
       },
     });
 
-    const emails = await getAmazonEmails("test-token");
-    expect(emails[0].body).toBe("");
-    expect(emails[0].subject).toBe("(no subject)");
-    expect(emails[0].date).toBe("");
+    const result = await getAmazonEmails("test-token");
+    expect(result.emails[0].body).toBe("");
+    expect(result.emails[0].subject).toBe("(no subject)");
+    expect(result.emails[0].date).toBe("");
   });
 
   it("Gmail APIエラーが伝播する", async () => {
     mockMessagesList.mockRejectedValue(new Error("Gmail API error"));
 
     await expect(getAmazonEmails("bad-token")).rejects.toThrow("Gmail API error");
+  });
+
+  it("nextPageTokenを返す", async () => {
+    mockMessagesList.mockResolvedValue({
+      data: {
+        messages: [{ id: "msg1", threadId: "t1" }],
+        nextPageToken: "token123",
+      },
+    });
+
+    mockMessagesGet.mockResolvedValue({
+      data: {
+        snippet: "test",
+        payload: {
+          headers: [
+            { name: "Subject", value: "テスト" },
+            { name: "Date", value: "2025-01-15" },
+          ],
+          body: { data: base64Encode("body") },
+        },
+      },
+    });
+
+    const result = await getAmazonEmails("test-token", 10, "prevToken");
+    expect(result.nextPageToken).toBe("token123");
+    expect(result.emails).toHaveLength(1);
+  });
+
+  it("メール詳細取得失敗時はスキップして他のメールを返す", async () => {
+    mockMessagesList.mockResolvedValue({
+      data: {
+        messages: [
+          { id: "msg1", threadId: "t1" },
+          { id: "msg2", threadId: "t2" },
+        ],
+      },
+    });
+
+    mockMessagesGet.mockImplementation(({ id }: { id: string }) => {
+      if (id === "msg1") {
+        return Promise.reject(new Error("fetch failed"));
+      }
+      return Promise.resolve({
+        data: {
+          snippet: "ok",
+          payload: {
+            headers: [
+              { name: "Subject", value: "OK" },
+              { name: "Date", value: "2025-01-15" },
+            ],
+            body: { data: base64Encode("body") },
+          },
+        },
+      });
+    });
+
+    const result = await getAmazonEmails("test-token");
+    // msg1 failed, only msg2 returned
+    expect(result.emails).toHaveLength(1);
+    expect(result.emails[0].id).toBe("msg2");
   });
 });
