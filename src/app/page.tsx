@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import Header from "@/components/Header";
 import EmailList from "@/components/EmailList";
 import OrderTable from "@/components/OrderTable";
+import { EmailListSkeleton, OrderTableSkeleton } from "@/components/SkeletonLoader";
 import { AmazonEmail, AnalysisResult, ParsedOrder } from "@/lib/types";
 
 export default function Home() {
@@ -13,11 +14,13 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<AnalysisResult[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
+  const [loadingPhase, setLoadingPhase] = useState<"emails" | "analyze" | null>(null);
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(null);
   const [spreadsheetId, setSpreadsheetId] = useState("");
 
   const fetchEmails = useCallback(async () => {
     setLoading("メールを取得中...");
+    setLoadingPhase("emails");
     try {
       const res = await fetch("/api/gmail");
       if (!res.ok) throw new Error("Failed to fetch emails");
@@ -29,6 +32,7 @@ export default function Home() {
       alert("メールの取得に失敗しました");
     } finally {
       setLoading(null);
+      setLoadingPhase(null);
     }
   }, []);
 
@@ -40,6 +44,7 @@ export default function Home() {
     }
 
     setLoading(`${selected.length}件のメールを解析中...`);
+    setLoadingPhase("analyze");
     setResults([]);
 
     const newResults: AnalysisResult[] = [];
@@ -48,7 +53,7 @@ export default function Home() {
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ emailHtml: email.body }),
+          body: JSON.stringify({ emailHtml: email.body, emailId: email.id }),
         });
         if (!res.ok) throw new Error("Analysis failed");
         const data = await res.json();
@@ -63,6 +68,7 @@ export default function Home() {
       setResults([...newResults]);
     }
     setLoading(null);
+    setLoadingPhase(null);
   }, [emails, selectedIds]);
 
   const exportToSheets = useCallback(async () => {
@@ -187,6 +193,11 @@ export default function Home() {
               メールを取得
             </button>
           </div>
+          {loadingPhase === "emails" && emails.length === 0 && (
+            <div className="mt-3">
+              <EmailListSkeleton />
+            </div>
+          )}
           {emails.length > 0 && (
             <div className="mt-3">
               <EmailList
@@ -214,6 +225,11 @@ export default function Home() {
                 選択したメールを解析 ({selectedIds.size}件)
               </button>
             </div>
+            {loadingPhase === "analyze" && results.length === 0 && (
+              <div className="mt-3">
+                <OrderTableSkeleton />
+              </div>
+            )}
             {results.length > 0 && (
               <div className="mt-3">
                 <OrderTable results={results} />
