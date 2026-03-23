@@ -35,7 +35,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => validOrderJson },
     });
 
-    const result = await analyzeEmailWithGemini("<html>テストメール</html>", "test-api-key");
+    const result = await analyzeEmailWithGemini("<html>テストメール</html>", "test-api-key", "amazon");
 
     expect(result).not.toBeNull();
     expect(result!.orderDate).toBe("2025-01-15");
@@ -54,7 +54,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => "```json\n" + validOrderJson + "\n```" },
     });
 
-    const result = await analyzeEmailWithGemini("<html>test</html>", "key");
+    const result = await analyzeEmailWithGemini("<html>test</html>", "key", "amazon");
 
     expect(result).not.toBeNull();
     expect(result!.orderNumber).toBe("250-1234567-7654321");
@@ -65,7 +65,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => "情報を抽出できませんでした。" },
     });
 
-    const result = await analyzeEmailWithGemini("<html>not an order</html>", "key");
+    const result = await analyzeEmailWithGemini("<html>not an order</html>", "key", "amazon");
     expect(result).toBeNull();
   });
 
@@ -74,7 +74,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => "{ invalid json }" },
     });
 
-    const result = await analyzeEmailWithGemini("<html>test</html>", "key");
+    const result = await analyzeEmailWithGemini("<html>test</html>", "key", "amazon");
     expect(result).toBeNull();
   });
 
@@ -83,7 +83,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => "null" },
     });
 
-    const result = await analyzeEmailWithGemini("<html>test</html>", "key");
+    const result = await analyzeEmailWithGemini("<html>test</html>", "key", "amazon");
     expect(result).toBeNull();
   });
 
@@ -100,7 +100,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => partialJson },
     });
 
-    const result = await analyzeEmailWithGemini("<html>test</html>", "key");
+    const result = await analyzeEmailWithGemini("<html>test</html>", "key", "amazon");
 
     expect(result).not.toBeNull();
     expect(result!.orderNumber).toBe("");
@@ -123,7 +123,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => badItemsJson },
     });
 
-    const result = await analyzeEmailWithGemini("<html>test</html>", "key");
+    const result = await analyzeEmailWithGemini("<html>test</html>", "key", "amazon");
 
     expect(result).not.toBeNull();
     expect(result!.items).toEqual([]);
@@ -135,7 +135,7 @@ describe("analyzeEmailWithGemini", () => {
       response: { text: () => validOrderJson },
     });
 
-    await analyzeEmailWithGemini(longHtml, "key");
+    await analyzeEmailWithGemini(longHtml, "key", "amazon");
 
     const calledWith = mockGenerateContent.mock.calls[0][0] as string;
     // Prompt + truncated HTML should be shorter than prompt + 50000
@@ -148,7 +148,52 @@ describe("analyzeEmailWithGemini", () => {
     mockGenerateContent.mockRejectedValue(new Error("API rate limit exceeded"));
 
     await expect(
-      analyzeEmailWithGemini("<html>test</html>", "key")
+      analyzeEmailWithGemini("<html>test</html>", "key", "amazon")
     ).rejects.toThrow("API rate limit exceeded");
+  });
+});
+
+describe("楽天メール解析", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const validRakutenOrderJson = JSON.stringify({
+    orderDate: "2026-01-10",
+    orderNumber: "393703-20260110-0005400563",
+    items: [
+      { name: "ターナー アイアンペイント200ml 黒皮鉄ブラック", quantity: 1, price: 1587 },
+      { name: "ターナー アイアンペイント200ml ライトゴールド", quantity: 1, price: 1088 },
+    ],
+    totalAmount: 4851,
+    tax: 441,
+    receiptUrl: "",
+  });
+
+  it("楽天用プロンプトで解析する", async () => {
+    mockGenerateContent.mockResolvedValue({
+      response: { text: () => validRakutenOrderJson },
+    });
+
+    const result = await analyzeEmailWithGemini("<html>楽天注文メール</html>", "key", "rakuten");
+
+    expect(result).not.toBeNull();
+    expect(result!.orderNumber).toBe("393703-20260110-0005400563");
+    expect(result!.totalAmount).toBe(4851);
+
+    // 楽天用プロンプトが使用されたことを確認
+    const calledWith = mockGenerateContent.mock.calls[0][0] as string;
+    expect(calledWith).toContain("楽天市場");
+  });
+
+  it("source を省略すると Amazon プロンプトが使われる", async () => {
+    mockGenerateContent.mockResolvedValue({
+      response: { text: () => validRakutenOrderJson },
+    });
+
+    await analyzeEmailWithGemini("<html>test</html>", "key");
+
+    const calledWith = mockGenerateContent.mock.calls[0][0] as string;
+    expect(calledWith).toContain("Amazon");
   });
 });
