@@ -15,5 +15,5 @@ export function getProvider(source: EmailSource): EmailProvider {
   return provider;
 }
 
-export { EmailProvider, GetEmailsOptions, GetEmailsResult, GmailDateFilter } from "./types";
-export { AmazonRegion } from "./amazon";
+export type { EmailProvider, GetEmailsOptions, GetEmailsResult, GmailDateFilter } from "./types";
+export type { AmazonRegion } from "./amazon";

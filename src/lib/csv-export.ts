@@ -1,5 +1,9 @@
-import { ParsedOrder } from "./types";
-import { getProvider } from "./providers";
+import { ParsedOrder, EmailSource } from "./types";
+
+function getDefaultReceiptUrl(source: EmailSource, orderNumber: string): string {
+  if (source === "rakuten") return "https://order.my.rakuten.co.jp/";
+  return `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${orderNumber}`;
+}
 
 /**
  * CSV用にセル値をエスケープする
@@ -37,7 +41,7 @@ export function ordersToCSV(orders: ParsedOrder[]): string {
 
   for (const order of orders) {
     const sourceLabel = order.source === "amazon" ? "Amazon" : "楽天";
-    const receiptUrl = order.receiptUrl || getProvider(order.source).getDefaultReceiptUrl(order.orderNumber);
+    const receiptUrl = order.receiptUrl || getDefaultReceiptUrl(order.source, order.orderNumber);
 
     for (const item of order.items) {
       rows.push([

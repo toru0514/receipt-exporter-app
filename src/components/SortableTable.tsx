@@ -2,7 +2,11 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { AnalysisResult, EmailSource } from "@/lib/types";
-import { getProvider } from "@/lib/providers";
+
+function getDefaultReceiptUrl(source: EmailSource, orderNumber: string): string {
+  if (source === "rakuten") return "https://order.my.rakuten.co.jp/";
+  return `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${orderNumber}`;
+}
 
 interface SortableTableProps {
   results: AnalysisResult[];
@@ -36,7 +40,7 @@ function flattenResults(results: AnalysisResult[]): FlatRow[] {
         itemName: item.name,
         itemPrice: item.price,
         tax: order.tax,
-        receiptUrl: order.receiptUrl || getProvider(source).getDefaultReceiptUrl(order.orderNumber),
+        receiptUrl: order.receiptUrl || getDefaultReceiptUrl(source, order.orderNumber),
         source,
       });
     }
