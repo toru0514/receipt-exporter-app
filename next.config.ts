@@ -43,7 +43,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // output: "standalone", // Vercel では不要（自動最適化される）
+  output: "standalone", // Docker ビルドに必要。Vercel では自動的に無視される
   async headers() {
     return [
       {
