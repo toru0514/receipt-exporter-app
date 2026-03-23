@@ -13,6 +13,8 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "googleapis": "^171.4.0",
+    "jszip": "^3.10.1",
+    "microcms-js-sdk": "^3.3.0",
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "react": "19.2.3",
