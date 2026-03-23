@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { AnalysisResult } from "@/lib/types";
+import { AnalysisResult, EmailSource } from "@/lib/types";
+import { getProvider } from "@/lib/providers";
 
 interface SortableTableProps {
   results: AnalysisResult[];
@@ -18,6 +19,7 @@ interface FlatRow {
   itemPrice: number;
   tax: number;
   receiptUrl: string;
+  source: EmailSource;
 }
 
 function flattenResults(results: AnalysisResult[]): FlatRow[] {
@@ -25,6 +27,7 @@ function flattenResults(results: AnalysisResult[]): FlatRow[] {
   for (const result of results) {
     if (!result.order) continue;
     const order = result.order;
+    const source = order.source ?? result.email.source ?? "amazon";
     for (const item of order.items) {
       rows.push({
         emailId: result.email.id,
@@ -33,9 +36,8 @@ function flattenResults(results: AnalysisResult[]): FlatRow[] {
         itemName: item.name,
         itemPrice: item.price,
         tax: order.tax,
-        receiptUrl:
-          order.receiptUrl ||
-          `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${order.orderNumber}`,
+        receiptUrl: order.receiptUrl || getProvider(source).getDefaultReceiptUrl(order.orderNumber),
+        source,
       });
     }
   }
@@ -127,6 +129,7 @@ export default function SortableTable({ results }: SortableTableProps) {
                       <SortIndicator active={sortKey === "orderDate"} direction={sortDirection} />
                     </th>
                     <th className="whitespace-nowrap px-4 py-2">注文番号</th>
+                    <th className="whitespace-nowrap px-4 py-2">ソース</th>
                     <th
                       className="cursor-pointer select-none whitespace-nowrap px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => handleSort("itemName")}
@@ -156,6 +159,9 @@ export default function SortableTable({ results }: SortableTableProps) {
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 font-mono text-xs dark:text-gray-200">
                         {row.orderNumber}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2 dark:text-gray-200">
+                        {row.source === "amazon" ? "Amazon" : "楽天"}
                       </td>
                       <td className="px-4 py-2 dark:text-gray-200">{row.itemName}</td>
                       <td className="whitespace-nowrap px-4 py-2 text-right dark:text-gray-200">

@@ -13,7 +13,8 @@ import CsvDownloadButton from "@/components/CsvDownloadButton";
 import { EmailListSkeleton, OrderTableSkeleton } from "@/components/SkeletonLoader";
 import { AmazonEmail, AnalysisResult, ParsedOrder } from "@/lib/types";
 import { addExportHistory } from "@/lib/export-history";
-import type { AmazonRegion } from "@/lib/gmail";
+import type { AmazonRegion } from "@/lib/providers";
+import type { EmailSource } from "@/lib/types";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -39,6 +40,9 @@ export default function Home() {
   // リージョン選択
   const [region, setRegion] = useState<AmazonRegion>("jp");
 
+  // プロバイダー選択
+  const [provider, setProvider] = useState<EmailSource>("amazon");
+
   // エクスポート履歴リフレッシュ用
   const [historyKey, setHistoryKey] = useState(0);
 
@@ -50,6 +54,7 @@ export default function Home() {
       if (dateAfter) params.set("after", dateAfter);
       if (dateBefore) params.set("before", dateBefore);
       if (region !== "jp") params.set("region", region);
+      params.set("provider", provider);
 
       const queryString = params.toString();
       const url = `/api/gmail${queryString ? `?${queryString}` : ""}`;
@@ -66,7 +71,7 @@ export default function Home() {
       setLoading(null);
       setLoadingPhase(null);
     }
-  }, [dateAfter, dateBefore, region]);
+  }, [dateAfter, dateBefore, region, provider]);
 
   const analyzeEmails = useCallback(async () => {
     const selected = emails.filter((e) => selectedIds.has(e.id));
@@ -86,7 +91,7 @@ export default function Home() {
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ emailHtml: email.body, emailId: email.id }),
+          body: JSON.stringify({ emailHtml: email.body, emailId: email.id, source: provider }),
         });
         if (!res.ok) throw new Error("Analysis failed");
         const data = await res.json();
@@ -103,7 +108,7 @@ export default function Home() {
     }
     setLoading(null);
     setLoadingPhase(null);
-  }, [emails, selectedIds]);
+  }, [emails, selectedIds, provider]);
 
   const exportToSheets = useCallback(async () => {
     const orders = results
@@ -214,10 +219,10 @@ export default function Home() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4 dark:bg-gray-950">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Amazon 経費管理
+            EC経費管理
           </h1>
           <p className="mt-2 text-sm text-gray-600 sm:text-base dark:text-gray-400">
-            Amazonの注文確認メールから経費情報を自動抽出し、
+            ECサイトの注文確認メールから経費情報を自動抽出し、
             <br />
             Google Sheetsに記録します
           </p>
@@ -254,6 +259,31 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
       <main className="mx-auto max-w-5xl px-4 py-4 sm:py-6">
+        {/* Provider Tab */}
+        <div className="mb-4 flex border-b border-gray-200 dark:border-gray-700">
+          {(["amazon", "rakuten"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => {
+                if (p !== provider) {
+                  setProvider(p);
+                  setEmails([]);
+                  setResults([]);
+                  setSelectedIds(new Set());
+                  setSpreadsheetUrl(null);
+                }
+              }}
+              className={`px-4 py-2 text-sm font-medium ${
+                provider === p
+                  ? "border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              }`}
+            >
+              {p === "amazon" ? "Amazon" : "楽天市場"}
+            </button>
+          ))}
+        </div>
+
         {loading && (
           <div className="mb-4 space-y-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
             <p>{loading}</p>
@@ -271,7 +301,7 @@ export default function Home() {
         <section className="mb-4 sm:mb-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-base font-semibold text-gray-900 sm:text-lg dark:text-gray-100">
-              1. Amazon メールを取得
+              1. {provider === "amazon" ? "Amazon" : "楽天市場"} メールを取得
             </h2>
             <button
               onClick={fetchEmails}
@@ -285,25 +315,27 @@ export default function Home() {
           {/* フィルタパネル */}
           <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-              <div>
-                <label
-                  htmlFor="region-select"
-                  className="block text-xs font-medium text-gray-600 dark:text-gray-400"
-                >
-                  リージョン
-                </label>
-                <select
-                  id="region-select"
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value as AmazonRegion)}
-                  disabled={!!loading}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                >
-                  <option value="jp">Amazon.co.jp</option>
-                  <option value="us">Amazon.com</option>
-                  <option value="all">すべて</option>
-                </select>
-              </div>
+              {provider === "amazon" && (
+                <div>
+                  <label
+                    htmlFor="region-select"
+                    className="block text-xs font-medium text-gray-600 dark:text-gray-400"
+                  >
+                    リージョン
+                  </label>
+                  <select
+                    id="region-select"
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value as AmazonRegion)}
+                    disabled={!!loading}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    <option value="jp">Amazon.co.jp</option>
+                    <option value="us">Amazon.com</option>
+                    <option value="all">すべて</option>
+                  </select>
+                </div>
+              )}
               <DateRangeFilter onApply={handleDateApply} disabled={!!loading} />
             </div>
           </div>
@@ -320,6 +352,7 @@ export default function Home() {
                 selectedIds={selectedIds}
                 onToggle={toggleEmail}
                 onSelectAll={selectAll}
+                provider={provider}
               />
             </div>
           )}
