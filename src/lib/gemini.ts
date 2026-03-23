@@ -5,19 +5,21 @@ import { AppError } from "./errors";
 import { logger } from "./logger";
 import { metrics } from "./metrics";
 
-const EXTRACTION_PROMPT = `あなたはAmazon.co.jpの注文確認メールから注文情報を抽出するアシスタントです。
+const EXTRACTION_PROMPT = `あなたはAmazon.co.jpの注文関連メール（注文確認、発送通知、配達通知など）から注文情報を抽出するアシスタントです。
 以下のHTMLメール本文から、注文情報を抽出してJSON形式で返してください。
+メールが転送メール（Fwd:）の場合も、転送元の本文から情報を抽出してください。
 
 抽出する項目:
-- orderDate: 注文日（YYYY-MM-DD形式）
+- orderDate: 注文日または発送日（YYYY-MM-DD形式）。メール内の日付情報から推定してください。
 - orderNumber: 注文番号（例: 250-1234567-1234567）
 - items: 商品リスト（各商品のname, quantity, price）
-- totalAmount: 合計金額（数値、円単位）
+- totalAmount: 合計金額（数値、円単位）。「合計」「お支払い」「ご請求額」等の記載から取得。個別商品の価格しかない場合はその合計を計算。
 - tax: 消費税額（数値、円単位。不明な場合は0）
 - receiptUrl: 領収書URL（メール内にリンクがあれば。なければ空文字）
 
 注意:
-- 金額は数値のみ（カンマや￥記号は除去）
+- 金額は数値のみ（カンマや￥記号は除去）。例: ￥2,673 → 2673
+- 発送通知メールにも商品名と金額が含まれていることが多いので、必ず抽出すること
 - 複数商品がある場合はitemsに全て含める
 - 情報が見つからない場合はnullを返す
 - 必ずJSON形式のみで返してください（説明文は不要）
@@ -144,7 +146,7 @@ export async function analyzeEmailWithGemini(
   apiKey: string
 ): Promise<ParsedOrder | null> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const truncatedHtml =
     emailHtml.length > 30000 ? emailHtml.substring(0, 30000) : emailHtml;

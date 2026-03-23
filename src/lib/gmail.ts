@@ -2,16 +2,15 @@ import { google } from "googleapis";
 import { AmazonEmail } from "./types";
 import { withRetry } from "./retry";
 
+// 発送確認メール（金額情報を含む）のみに絞る
 const AMAZON_SENDERS_JP = [
   "auto-confirm@amazon.co.jp",
-  "ship-confirm@amazon.co.jp",
-  "order-update@amazon.co.jp",
+  "shipment-tracking@amazon.co.jp",
 ];
 
 const AMAZON_SENDERS_US = [
   "auto-confirm@amazon.com",
-  "ship-confirm@amazon.com",
-  "order-update@amazon.com",
+  "shipment-tracking@amazon.com",
 ];
 
 export type AmazonRegion = "jp" | "us" | "all";
@@ -37,7 +36,17 @@ function buildAmazonQuery(
   dateFilter?: GmailDateFilter
 ): string {
   const senders = getSendersForRegion(region);
-  let query = senders.map((s) => `from:${s}`).join(" OR ");
+  const fromConditions = senders.map((s) => `from:${s}`).join(" OR ");
+
+  // 転送メール（Fwd: 発送済み）も検索対象に含める
+  const forwardedCondition =
+    region === "us"
+      ? "subject:fwd subject:shipped amazon.com"
+      : region === "jp"
+        ? "subject:fwd subject:発送済み amazon.co.jp"
+        : "subject:fwd (subject:発送済み OR subject:shipped) (amazon.co.jp OR amazon.com)";
+
+  let query = `(${fromConditions} OR (${forwardedCondition}))`;
 
   if (dateFilter?.after) {
     // Gmail expects after:YYYY/MM/DD
