@@ -5,6 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { validateEmailHtml } from "@/lib/validation";
 import { TTLCache } from "@/lib/cache";
 import { ParsedOrder } from "@/lib/types";
+import type { EmailSource } from "@/lib/types";
 import { logger } from "@/lib/logger";
 import { errorTracker } from "@/lib/error-tracker";
 import { metrics } from "@/lib/metrics";
@@ -73,7 +74,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { emailHtml, emailId } = body as { emailHtml?: unknown; emailId?: unknown };
+    const { emailHtml, emailId, source: sourceParam } = body as { emailHtml?: unknown; emailId?: unknown; source?: unknown };
+
+    const source: EmailSource = (
+      typeof sourceParam === "string" && ["amazon", "rakuten"].includes(sourceParam)
+        ? sourceParam
+        : "amazon"
+    ) as EmailSource;
 
     // 入力値バリデーション
     const validation = validateEmailHtml(emailHtml);
@@ -88,8 +95,12 @@ export async function POST(request: NextRequest) {
     }
 
     // キャッシュチェック（emailId が提供されている場合）
-    if (typeof emailId === "string" && emailId.length > 0) {
-      const cached = analysisCache.get(emailId);
+    const cacheKey = typeof emailId === "string" && emailId.length > 0
+      ? `${source}:${emailId}`
+      : null;
+
+    if (cacheKey) {
+      const cached = analysisCache.get(cacheKey);
       if (cached !== undefined) {
         log.info("Cache hit for email analysis", { emailId });
         metrics.recordSuccess("/api/analyze");
@@ -99,11 +110,11 @@ export async function POST(request: NextRequest) {
     }
 
     log.info("Analyzing email with Gemini");
-    const order = await analyzeEmailWithGemini(emailHtml as string, apiKey);
+    const order = await analyzeEmailWithGemini(emailHtml as string, apiKey, source);
 
     // キャッシュに保存（emailId が提供されている場合）
-    if (typeof emailId === "string" && emailId.length > 0) {
-      analysisCache.set(emailId, order);
+    if (cacheKey) {
+      analysisCache.set(cacheKey, order);
     }
 
     log.info("Email analysis completed", { hasOrder: order !== null });
@@ -183,9 +194,16 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { emails } = body as {
+    const { emails, source: sourceParam } = body as {
       emails?: Array<{ id: string; body: string }>;
+      source?: unknown;
     };
+
+    const source: EmailSource = (
+      typeof sourceParam === "string" && ["amazon", "rakuten"].includes(sourceParam)
+        ? sourceParam
+        : "amazon"
+    ) as EmailSource;
 
     if (!Array.isArray(emails) || emails.length === 0) {
       log.warn("Invalid emails array in batch request");
@@ -208,12 +226,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     log.info("Starting batch email analysis", { count: emails.length });
-    const batchResult = await analyzeEmailsBatch(emails, apiKey);
+    const batchResult = await analyzeEmailsBatch(emails, apiKey, source);
 
     // 成功した結果をキャッシュに保存
     for (const result of batchResult.results) {
       if (result.order) {
-        analysisCache.set(result.emailId, result.order);
+        result.order.source = source;
+        analysisCache.set(`${source}:${result.emailId}`, result.order);
       }
     }
 
