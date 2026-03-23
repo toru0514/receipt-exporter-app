@@ -1,7 +1,9 @@
 import { EmailSource } from "../types";
 import { EmailProvider } from "./types";
+import { AmazonProvider } from "./amazon";
 
 const providers = new Map<EmailSource, EmailProvider>();
+providers.set("amazon", new AmazonProvider());
 
 export function getProvider(source: EmailSource): EmailProvider {
   const provider = providers.get(source);
@@ -11,8 +13,5 @@ export function getProvider(source: EmailSource): EmailProvider {
   return provider;
 }
 
-export function registerProvider(provider: EmailProvider): void {
-  providers.set(provider.source, provider);
-}
-
 export { EmailProvider, GetEmailsOptions, GetEmailsResult, GmailDateFilter } from "./types";
+export { AmazonRegion } from "./amazon";
