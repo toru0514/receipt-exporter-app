@@ -1,4 +1,5 @@
 import { ParsedOrder } from "./types";
+import { getProvider } from "./providers";
 
 /**
  * CSV用にセル値をエスケープする
@@ -28,12 +29,16 @@ export function ordersToCSV(orders: ParsedOrder[]): string {
     "金額",
     "消費税",
     "合計金額",
+    "ソース",
     "領収書リンク",
   ];
 
   const rows: string[][] = [];
 
   for (const order of orders) {
+    const sourceLabel = order.source === "amazon" ? "Amazon" : "楽天";
+    const receiptUrl = order.receiptUrl || getProvider(order.source).getDefaultReceiptUrl(order.orderNumber);
+
     for (const item of order.items) {
       rows.push([
         order.orderDate,
@@ -43,8 +48,8 @@ export function ordersToCSV(orders: ParsedOrder[]): string {
         String(item.price),
         String(order.tax),
         String(order.totalAmount),
-        order.receiptUrl ||
-          `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${order.orderNumber}`,
+        sourceLabel,
+        receiptUrl,
       ]);
     }
   }
@@ -74,7 +79,7 @@ export function downloadCsv(orders: ParsedOrder[], filename?: string): void {
   const a = document.createElement("a");
   a.href = url;
   a.download =
-    filename || `amazon_orders_${new Date().toISOString().split("T")[0]}.csv`;
+    filename || `ec_orders_${new Date().toISOString().split("T")[0]}.csv`;
   document.body.appendChild(a);
   a.click();
 
