@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { ParsedOrder } from "./types";
 import { withRetry } from "./retry";
+import { getProvider } from "./providers";
 
 const SHEETS_RETRY_OPTIONS = {
   maxRetries: 3,
@@ -13,6 +14,8 @@ const SHEETS_RETRY_OPTIONS = {
   },
 };
 
+const HEADERS = ["注文日", "注文番号", "商品名", "金額", "消費税", "ソース", "領収書リンク"];
+
 export async function exportToSheet(
   accessToken: string,
   spreadsheetId: string,
@@ -23,51 +26,57 @@ export async function exportToSheet(
 
   const sheets = google.sheets({ version: "v4", auth });
 
-  // Check if header row exists, add if not
+  // ヘッダー行チェック
   const headerCheck = await withRetry(
     () =>
       sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: "Sheet1!A1:F1",
+        range: "Sheet1!A1:G1",
       }),
     SHEETS_RETRY_OPTIONS
   );
 
-  if (!headerCheck.data.values || headerCheck.data.values.length === 0) {
+  const existingHeaders = headerCheck.data.values?.[0];
+  if (!existingHeaders || existingHeaders.length === 0) {
+    // ヘッダーなし → 新規作成
     await withRetry(
       () =>
         sheets.spreadsheets.values.update({
           spreadsheetId,
-          range: "Sheet1!A1:F1",
+          range: "Sheet1!A1:G1",
           valueInputOption: "RAW",
-          requestBody: {
-            values: [
-              [
-                "注文日",
-                "注文番号",
-                "商品名",
-                "金額",
-                "消費税",
-                "領収書リンク",
-              ],
-            ],
-          },
+          requestBody: { values: [HEADERS] },
+        }),
+      SHEETS_RETRY_OPTIONS
+    );
+  } else if (existingHeaders.length <= 6 && !existingHeaders.includes("ソース")) {
+    // 旧6列ヘッダー → 7列に更新
+    await withRetry(
+      () =>
+        sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: "Sheet1!A1:G1",
+          valueInputOption: "RAW",
+          requestBody: { values: [HEADERS] },
         }),
       SHEETS_RETRY_OPTIONS
     );
   }
 
-  const rows = orders.flatMap((order) =>
-    order.items.map((item) => [
+  const rows = orders.flatMap((order) => {
+    const sourceLabel = order.source === "amazon" ? "Amazon" : "楽天";
+    const receiptUrl = order.receiptUrl || getProvider(order.source).getDefaultReceiptUrl(order.orderNumber);
+
+    return order.items.map((item) => [
       order.orderDate,
       order.orderNumber,
       item.name,
       item.price,
       order.tax,
-      order.receiptUrl ||
-        `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${order.orderNumber}`,
-    ])
-  );
+      sourceLabel,
+      receiptUrl,
+    ]);
+  });
 
   if (rows.length === 0) return { updatedRows: 0 };
 
@@ -75,7 +84,7 @@ export async function exportToSheet(
     () =>
       sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: "Sheet1!A:F",
+        range: "Sheet1!A:G",
         valueInputOption: "USER_ENTERED",
         requestBody: { values: rows },
       }),
@@ -100,7 +109,7 @@ export async function createSpreadsheet(
       sheets.spreadsheets.create({
         requestBody: {
           properties: {
-            title: `Amazon経費管理_${new Date().toISOString().split("T")[0]}`,
+            title: `EC経費管理_${new Date().toISOString().split("T")[0]}`,
           },
           sheets: [
             {
@@ -111,14 +120,7 @@ export async function createSpreadsheet(
                   startColumn: 0,
                   rowData: [
                     {
-                      values: [
-                        "注文日",
-                        "注文番号",
-                        "商品名",
-                        "金額",
-                        "消費税",
-                        "領収書リンク",
-                      ].map((header) => ({
+                      values: HEADERS.map((header) => ({
                         userEnteredValue: { stringValue: header },
                         userEnteredFormat: { textFormat: { bold: true } },
                       })),
