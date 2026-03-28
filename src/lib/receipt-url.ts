@@ -6,5 +6,5 @@ import type { EmailSource } from "./types";
  */
 export function getDefaultReceiptUrl(source: EmailSource, orderNumber: string): string {
   if (source === "rakuten") return "https://order.my.rakuten.co.jp/";
-  return `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${orderNumber}`;
+  return `https://www.amazon.co.jp/gp/your-account/order-details?orderID=${orderNumber}`;
 }

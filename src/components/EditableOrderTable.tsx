@@ -481,7 +481,7 @@ export default function EditableOrderTable({
                         <a
                           href={
                             order.receiptUrl ||
-                            `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${order.orderNumber}`
+                            `https://www.amazon.co.jp/gp/your-account/order-details?orderID=${order.orderNumber}`
                           }
                           target="_blank"
                           rel="noopener noreferrer"

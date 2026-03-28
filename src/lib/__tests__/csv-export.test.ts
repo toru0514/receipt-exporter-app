@@ -51,6 +51,6 @@ describe("ordersToCSV", () => {
     const orderNoUrl: ParsedOrder = { ...amazonOrder, receiptUrl: "" };
     const csv = ordersToCSV([orderNoUrl]);
     const dataLine = csv.split("\n")[1];
-    expect(dataLine).toContain("amazon.co.jp/gp/css/summary/print.html");
+    expect(dataLine).toContain("amazon.co.jp/gp/your-account/order-details");
   });
 });

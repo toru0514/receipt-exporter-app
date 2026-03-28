@@ -65,7 +65,7 @@ export default function OrderTable({ results }: OrderTableProps) {
                           <a
                             href={
                               result.order!.receiptUrl ||
-                              `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${result.order!.orderNumber}`
+                              `https://www.amazon.co.jp/gp/your-account/order-details?orderID=${result.order!.orderNumber}`
                             }
                             target="_blank"
                             rel="noopener noreferrer"

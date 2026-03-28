@@ -97,7 +97,7 @@ describe("AmazonProvider", () => {
   it("デフォルト領収書URLを生成する", () => {
     const url = provider.getDefaultReceiptUrl("250-1234567-7654321");
     expect(url).toBe(
-      "https://www.amazon.co.jp/gp/css/summary/print.html?orderID=250-1234567-7654321"
+      "https://www.amazon.co.jp/gp/your-account/order-details?orderID=250-1234567-7654321"
     );
   });
 

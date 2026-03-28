@@ -146,7 +146,7 @@ describe("exportToSheet", () => {
     const rows = mockValuesAppend.mock.calls[0][0].requestBody.values;
     expect(rows[0][5]).toBe("Amazon");
     expect(rows[0][6]).toBe(
-      "https://www.amazon.co.jp/gp/css/summary/print.html?orderID=250-9999999-0000000"
+      "https://www.amazon.co.jp/gp/your-account/order-details?orderID=250-9999999-0000000"
     );
   });
 

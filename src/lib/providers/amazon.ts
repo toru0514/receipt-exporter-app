@@ -57,6 +57,6 @@ export class AmazonProvider implements EmailProvider {
   }
 
   getDefaultReceiptUrl(orderNumber: string): string {
-    return `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${orderNumber}`;
+    return `https://www.amazon.co.jp/gp/your-account/order-details?orderID=${orderNumber}`;
   }
 }
