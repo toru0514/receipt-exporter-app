@@ -166,9 +166,34 @@ function toParsedOrder(parsed: Record<string, unknown>, source: EmailSource): Pa
       : [],
     totalAmount: Number(parsed.totalAmount) || 0,
     tax: Number(parsed.tax) || 0,
-    receiptUrl: typeof parsed.receiptUrl === "string" ? parsed.receiptUrl : "",
+    receiptUrl: typeof parsed.receiptUrl === "string" ? sanitizeReceiptUrl(parsed.receiptUrl) : "",
     source,
   };
+}
+
+/**
+ * Geminiが抽出した領収書URLから不要なパラメータを除去する。
+ * Amazon メール内のURLには ie=UTF8 等のパラメータが含まれていることがあり、
+ * そのままだとページが開けない場合がある。
+ */
+function sanitizeReceiptUrl(url: string): string {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    // ie=UTF8 パラメータを除去
+    parsed.searchParams.delete("ie");
+    // ref_ パラメータを除去（トラッキング用、ページ表示に不要）
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (key.startsWith("ref_")) {
+        parsed.searchParams.delete(key);
+      }
+    }
+    // referrer パラメータを除去
+    parsed.searchParams.delete("referrer");
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 export async function analyzeEmailWithGemini(
