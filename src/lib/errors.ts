@@ -32,12 +32,12 @@ const ERROR_MAP: Record<AppErrorCode, AppErrorInfo> = {
     userMessage: "リクエストが多すぎます。しばらく待ってから再試行してください。",
   },
   GMAIL_FETCH_FAILED: {
-    statusCode: 502,
+    statusCode: 500,
     userMessage:
       "メールの取得に失敗しました。Googleアカウントの接続を確認し、再試行してください。",
   },
   GEMINI_API_FAILED: {
-    statusCode: 502,
+    statusCode: 500,
     userMessage:
       "メール解析サービスに一時的な問題が発生しています。しばらく待ってから再試行してください。",
   },
@@ -47,12 +47,12 @@ const ERROR_MAP: Record<AppErrorCode, AppErrorInfo> = {
       "メールの内容を解析できませんでした。Amazon注文確認メールであることを確認してください。",
   },
   SHEETS_EXPORT_FAILED: {
-    statusCode: 502,
+    statusCode: 500,
     userMessage:
       "スプレッドシートへの書き込みに失敗しました。スプレッドシートへのアクセス権限を確認してください。",
   },
   SHEETS_CREATE_FAILED: {
-    statusCode: 502,
+    statusCode: 500,
     userMessage:
       "スプレッドシートの作成に失敗しました。Google Driveへのアクセス権限を確認してください。",
   },
