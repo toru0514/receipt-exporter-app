@@ -45,20 +45,20 @@ describe("AmazonProvider", () => {
 
   it("JPリージョンのクエリを構築する", () => {
     const query = provider.buildQuery({ region: "jp" });
-    expect(query).toContain("from:auto-confirm@amazon.co.jp");
-    expect(query).not.toContain("from:auto-confirm@amazon.com");
+    expect(query).toContain("from:shipment-tracking@amazon.co.jp");
+    expect(query).not.toContain("amazon.com");
   });
 
   it("USリージョンのクエリを構築する", () => {
     const query = provider.buildQuery({ region: "us" });
-    expect(query).toContain("from:auto-confirm@amazon.com");
-    expect(query).not.toContain("from:auto-confirm@amazon.co.jp");
+    expect(query).toContain("from:shipment-tracking@amazon.com");
+    expect(query).not.toContain("amazon.co.jp");
   });
 
   it("allリージョンで両方の送信元を含む", () => {
     const query = provider.buildQuery({ region: "all" });
-    expect(query).toContain("from:auto-confirm@amazon.co.jp");
-    expect(query).toContain("from:auto-confirm@amazon.com");
+    expect(query).toContain("from:shipment-tracking@amazon.co.jp");
+    expect(query).toContain("from:shipment-tracking@amazon.com");
   });
 
   it("日付フィルタを含むクエリを構築する", () => {

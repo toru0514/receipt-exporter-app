@@ -2,12 +2,10 @@ import { fetchAndParseEmails } from "../gmail";
 import { EmailProvider, GetEmailsOptions, GetEmailsResult } from "./types";
 
 const AMAZON_SENDERS_JP = [
-  "auto-confirm@amazon.co.jp",
   "shipment-tracking@amazon.co.jp",
 ];
 
 const AMAZON_SENDERS_US = [
-  "auto-confirm@amazon.com",
   "shipment-tracking@amazon.com",
 ];
 
