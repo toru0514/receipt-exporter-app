@@ -1,12 +1,13 @@
 "use client";
 
-import { AmazonEmail } from "@/lib/types";
+import { AmazonEmail, EmailSource } from "@/lib/types";
 
 interface EmailListProps {
   emails: AmazonEmail[];
   selectedIds: Set<string>;
   onToggle: (id: string) => void;
   onSelectAll: () => void;
+  provider?: EmailSource;
 }
 
 export default function EmailList({
@@ -14,11 +15,16 @@ export default function EmailList({
   selectedIds,
   onToggle,
   onSelectAll,
+  provider = "amazon",
 }: EmailListProps) {
+  const emptyMessage = provider === "rakuten"
+    ? "楽天市場からの注文確認メールが見つかりませんでした"
+    : "Amazonからの注文確認メールが見つかりませんでした";
+
   if (emails.length === 0) {
     return (
       <div className="rounded-lg border border-gray-200 p-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400">
-        Amazonからの注文確認メールが見つかりませんでした
+        {emptyMessage}
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getAmazonEmails, AmazonRegion } from "@/lib/gmail";
+import { getProvider } from "@/lib/providers";
+import type { EmailSource } from "@/lib/types";
 import { rateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { errorTracker } from "@/lib/error-tracker";
@@ -43,17 +44,33 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    log.info("Fetching Amazon emails");
+    const providerParam = request.nextUrl.searchParams.get("provider") ?? "amazon";
+    const source: EmailSource = (["amazon", "rakuten"].includes(providerParam)
+      ? providerParam
+      : "amazon") as EmailSource;
+
+    log.info("Fetching emails", { provider: source });
+
     const pageToken = request.nextUrl.searchParams.get("pageToken") ?? undefined;
     const after = request.nextUrl.searchParams.get("after") ?? undefined;
     const before = request.nextUrl.searchParams.get("before") ?? undefined;
     const regionParam = request.nextUrl.searchParams.get("region") ?? "jp";
-    const region: AmazonRegion = (["jp", "us", "all"].includes(regionParam)
-      ? regionParam
-      : "jp") as AmazonRegion;
 
-    const dateFilter = after || before ? { after, before } : undefined;
-    const result = await getAmazonEmails(session.accessToken, 20, pageToken, region, dateFilter);
+    const dateFilter = after || before
+      ? {
+          ...(after !== undefined && { after }),
+          ...(before !== undefined && { before }),
+        }
+      : undefined;
+
+    const provider = getProvider(source);
+    const result = await provider.getEmails(session.accessToken, {
+      maxResults: 20,
+      pageToken,
+      dateFilter,
+      region: source === "amazon" ? regionParam : undefined,
+    });
+
     log.info("Emails fetched successfully", { count: result.emails.length });
     metrics.recordSuccess("/api/gmail");
     endRequest();

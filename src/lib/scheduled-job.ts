@@ -5,7 +5,7 @@
  * OAuth トークンが必要なため、実行にはアクティブなセッション（refreshToken）が必要。
  */
 
-import { getAmazonEmails } from "./gmail";
+import { getProvider } from "./providers";
 import { analyzeEmailsBatch, BatchAnalysisResult } from "./gemini";
 import { logger } from "./logger";
 
@@ -55,7 +55,8 @@ export async function runScheduledJob(
   try {
     // Step 1: Gmail からメール取得
     log.info("Fetching Amazon emails from Gmail");
-    const { emails } = await getAmazonEmails(accessToken, maxEmails);
+    const provider = getProvider("amazon");
+    const { emails } = await provider.getEmails(accessToken, { maxResults: maxEmails });
 
     if (emails.length === 0) {
       log.info("No Amazon emails found");

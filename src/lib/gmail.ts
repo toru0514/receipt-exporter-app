@@ -1,68 +1,12 @@
 import { google } from "googleapis";
-import { AmazonEmail } from "./types";
+import { OrderEmail, EmailSource } from "./types";
 import { withRetry } from "./retry";
-
-// 発送確認メール（金額情報を含む）のみに絞る
-const AMAZON_SENDERS_JP = [
-  "auto-confirm@amazon.co.jp",
-  "shipment-tracking@amazon.co.jp",
-];
-
-const AMAZON_SENDERS_US = [
-  "auto-confirm@amazon.com",
-  "shipment-tracking@amazon.com",
-];
-
-export type AmazonRegion = "jp" | "us" | "all";
-
-function getSendersForRegion(region: AmazonRegion): string[] {
-  switch (region) {
-    case "jp":
-      return AMAZON_SENDERS_JP;
-    case "us":
-      return AMAZON_SENDERS_US;
-    case "all":
-      return [...AMAZON_SENDERS_JP, ...AMAZON_SENDERS_US];
-  }
-}
-
-export interface GmailDateFilter {
-  after?: string; // YYYY-MM-DD
-  before?: string; // YYYY-MM-DD
-}
-
-function buildAmazonQuery(
-  region: AmazonRegion = "jp",
-  dateFilter?: GmailDateFilter
-): string {
-  const senders = getSendersForRegion(region);
-  const fromConditions = senders.map((s) => `from:${s}`).join(" OR ");
-
-  // 転送メール（Fwd: 発送済み）も検索対象に含める
-  const forwardedCondition =
-    region === "us"
-      ? "subject:fwd subject:shipped amazon.com"
-      : region === "jp"
-        ? "subject:fwd subject:発送済み amazon.co.jp"
-        : "subject:fwd (subject:発送済み OR subject:shipped) (amazon.co.jp OR amazon.com)";
-
-  let query = `(${fromConditions} OR (${forwardedCondition}))`;
-
-  if (dateFilter?.after) {
-    // Gmail expects after:YYYY/MM/DD
-    query += ` after:${dateFilter.after.replace(/-/g, "/")}`;
-  }
-  if (dateFilter?.before) {
-    query += ` before:${dateFilter.before.replace(/-/g, "/")}`;
-  }
-
-  return query;
-}
+import { GmailDateFilter, GetEmailsOptions, GetEmailsResult } from "./providers/types";
 
 /** 並列取得の最大同時実行数 */
 const MAX_CONCURRENCY = 5;
 
-const GMAIL_RETRY_OPTIONS = {
+export const GMAIL_RETRY_OPTIONS = {
   maxRetries: 3,
   baseDelayMs: 1000,
   maxDelayMs: 10000,
@@ -73,17 +17,12 @@ const GMAIL_RETRY_OPTIONS = {
   },
 };
 
-export interface GetAmazonEmailsResult {
-  emails: AmazonEmail[];
-  nextPageToken?: string;
-}
-
 /**
  * 並列実行数を制御しながら非同期タスクを実行する
  */
-async function runWithConcurrency<T>(
+export async function runWithConcurrency<T>(
   tasks: (() => Promise<T>)[],
-  concurrency: number
+  concurrency: number = MAX_CONCURRENCY
 ): Promise<PromiseSettledResult<T>[]> {
   const results: PromiseSettledResult<T>[] = new Array(tasks.length);
   let index = 0;
@@ -109,89 +48,7 @@ async function runWithConcurrency<T>(
   return results;
 }
 
-export async function getAmazonEmails(
-  accessToken: string,
-  maxResults: number = 20,
-  pageToken?: string,
-  region: AmazonRegion = "jp",
-  dateFilter?: GmailDateFilter
-): Promise<GetAmazonEmailsResult> {
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
-
-  const gmail = google.gmail({ version: "v1", auth });
-
-  const query = buildAmazonQuery(region, dateFilter);
-
-  const listResponse = await withRetry(
-    () =>
-      gmail.users.messages.list({
-        userId: "me",
-        q: query,
-        maxResults,
-        pageToken,
-      }),
-    GMAIL_RETRY_OPTIONS
-  );
-
-  const messages = listResponse.data.messages || [];
-  const nextPageToken = listResponse.data.nextPageToken ?? undefined;
-
-  if (messages.length === 0) {
-    return { emails: [], nextPageToken };
-  }
-
-  // メール詳細を並列取得（最大 MAX_CONCURRENCY 並列）
-  const tasks = messages.map((msg) => () =>
-    withRetry(
-      () =>
-        gmail.users.messages.get({
-          userId: "me",
-          id: msg.id!,
-          format: "full",
-        }),
-      GMAIL_RETRY_OPTIONS
-    )
-  );
-
-  const settled = await runWithConcurrency(tasks, MAX_CONCURRENCY);
-
-  const emails: AmazonEmail[] = [];
-  for (let i = 0; i < settled.length; i++) {
-    const result = settled[i];
-    if (result.status === "rejected") {
-      console.error(`Failed to fetch message ${messages[i].id}:`, result.reason);
-      continue;
-    }
-
-    const detail = result.value;
-    const headers = detail.data.payload?.headers || [];
-    const subject =
-      headers.find((h) => h.name === "Subject")?.value || "(no subject)";
-    const date = headers.find((h) => h.name === "Date")?.value || "";
-
-    const body = extractBody(detail.data.payload);
-
-    emails.push({
-      id: messages[i].id!,
-      threadId: messages[i].threadId!,
-      subject,
-      date,
-      snippet: detail.data.snippet || "",
-      body,
-    });
-  }
-
-  return { emails, nextPageToken };
-}
-
-function extractBody(
-  payload: ReturnType<
-    typeof google.gmail
-  > extends { users: { messages: { get: (...args: unknown[]) => Promise<{ data: { payload?: infer P } }> } } }
-    ? P
-    : unknown
-): string {
+export function extractBody(payload: unknown): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const p = payload as any;
   if (!p) return "";
@@ -218,3 +75,86 @@ function extractBody(
 
   return "";
 }
+
+/**
+ * Gmail APIクライアントを生成する
+ */
+export function createGmailClient(accessToken: string) {
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+  return google.gmail({ version: "v1", auth });
+}
+
+/**
+ * 共通のメール取得・パース処理。各プロバイダーから呼び出す。
+ */
+export async function fetchAndParseEmails(
+  accessToken: string,
+  query: string,
+  source: EmailSource,
+  options: GetEmailsOptions
+): Promise<GetEmailsResult> {
+  const gmail = createGmailClient(accessToken);
+
+  const listResponse = await withRetry(
+    () =>
+      gmail.users.messages.list({
+        userId: "me",
+        q: query,
+        maxResults: options.maxResults ?? 20,
+        pageToken: options.pageToken,
+      }),
+    GMAIL_RETRY_OPTIONS
+  );
+
+  const messages = listResponse.data.messages || [];
+  const nextPageToken = listResponse.data.nextPageToken ?? undefined;
+
+  if (messages.length === 0) {
+    return { emails: [], nextPageToken };
+  }
+
+  const tasks = messages.map((msg) => () =>
+    withRetry(
+      () =>
+        gmail.users.messages.get({
+          userId: "me",
+          id: msg.id!,
+          format: "full",
+        }),
+      GMAIL_RETRY_OPTIONS
+    )
+  );
+
+  const settled = await runWithConcurrency(tasks);
+
+  const emails: OrderEmail[] = [];
+  for (let i = 0; i < settled.length; i++) {
+    const result = settled[i];
+    if (result.status === "rejected") {
+      console.error(`Failed to fetch message ${messages[i].id}:`, result.reason);
+      continue;
+    }
+
+    const detail = result.value;
+    const headers = detail.data.payload?.headers || [];
+    const subject =
+      headers.find((h) => h.name === "Subject")?.value || "(no subject)";
+    const date = headers.find((h) => h.name === "Date")?.value || "";
+
+    const body = extractBody(detail.data.payload);
+
+    emails.push({
+      id: messages[i].id!,
+      threadId: messages[i].threadId!,
+      subject,
+      date,
+      snippet: detail.data.snippet || "",
+      body,
+      source,
+    });
+  }
+
+  return { emails, nextPageToken };
+}
+
