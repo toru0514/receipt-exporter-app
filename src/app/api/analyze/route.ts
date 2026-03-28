@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { emailHtml, emailId, source: sourceParam } = body as { emailHtml?: unknown; emailId?: unknown; source?: unknown };
+    const { emailHtml, emailId, source: sourceParam, subject: subjectParam } = body as { emailHtml?: unknown; emailId?: unknown; source?: unknown; subject?: unknown };
 
     const source: EmailSource = (
       typeof sourceParam === "string" && ["amazon", "rakuten"].includes(sourceParam)
@@ -110,7 +110,8 @@ export async function POST(request: NextRequest) {
     }
 
     log.info("Analyzing email with Gemini");
-    const order = await analyzeEmailWithGemini(emailHtml as string, apiKey, source);
+    const subject = typeof subjectParam === "string" ? subjectParam : undefined;
+    const order = await analyzeEmailWithGemini(emailHtml as string, apiKey, source, subject);
 
     // キャッシュに保存（emailId が提供されている場合）
     if (cacheKey) {
@@ -195,7 +196,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { emails, source: sourceParam } = body as {
-      emails?: Array<{ id: string; body: string }>;
+      emails?: Array<{ id: string; body: string; subject?: string }>;
       source?: unknown;
     };
 

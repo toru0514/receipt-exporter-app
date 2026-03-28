@@ -90,7 +90,7 @@ export default function Home() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          emails: selected.map((e) => ({ id: e.id, body: e.body })),
+          emails: selected.map((e) => ({ id: e.id, body: e.body, subject: e.subject })),
           source: provider,
         }),
       });
