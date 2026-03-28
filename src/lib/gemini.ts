@@ -198,17 +198,38 @@ function sanitizeReceiptUrl(url: string): string {
 
 /**
  * HTMLからAmazon注文番号を正規表現で抽出する。
- * HTMLテキスト中の最初の出現を返す（メール本文の主要注文番号は通常最初に登場する）。
+ * 「注文番号」ラベル直後の番号を優先し、なければ最初の出現を返す。
  */
 function extractAmazonOrderNumber(html: string): string | null {
-  // HTMLタグを除去してテキスト化（注文番号周辺のテキストを正確に取得するため）
   const text = html.replace(/<[^>]+>/g, " ");
-  // 「注文番号」というラベルの直後にある注文番号を優先的に抽出
   const labeledMatch = text.match(/注文番号\s*[‫\s]*(\d{3}-\d{7}-\d{7})/);
   if (labeledMatch) return labeledMatch[1];
-  // フォールバック: 最初に出現する注文番号パターン
   const match = text.match(/\b(\d{3}-\d{7}-\d{7})\b/);
   return match ? match[1] : null;
+}
+
+/**
+ * AmazonメールのHTMLから主要注文情報の部分だけを抽出する。
+ *
+ * Amazonメールには上部にステータスバー（他の注文へのリンク付き）や
+ * 下部におすすめ商品・フッターなどのノイズが含まれるため、
+ * 「注文番号」ラベルの位置を基準に関連部分だけを切り出す。
+ */
+function extractRelevantHtml(html: string, source: EmailSource): string {
+  if (source !== "amazon") return html;
+
+  const orderNumber = extractAmazonOrderNumber(html);
+  if (!orderNumber) return html;
+
+  // HTML内で注文番号が出現する位置を見つける
+  const orderNumIndex = html.indexOf(orderNumber);
+  if (orderNumIndex === -1) return html;
+
+  // 注文番号より前の部分は最大2000文字に制限（ノイズの多いステータスバーを除外）
+  const startIndex = Math.max(0, orderNumIndex - 2000);
+  const relevantHtml = html.substring(startIndex);
+
+  return relevantHtml;
 }
 
 export async function analyzeEmailWithGemini(
@@ -220,8 +241,10 @@ export async function analyzeEmailWithGemini(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+  // 主要注文部分を抽出してからtruncate
+  const relevantHtml = extractRelevantHtml(emailHtml, source);
   const truncatedHtml =
-    emailHtml.length > 30000 ? emailHtml.substring(0, 30000) : emailHtml;
+    relevantHtml.length > 30000 ? relevantHtml.substring(0, 30000) : relevantHtml;
 
   const prompt = getPromptForSource(source);
   const subjectLine = subject ? `\nメール件名: ${subject}\n` : "";
