@@ -196,6 +196,21 @@ function sanitizeReceiptUrl(url: string): string {
   }
 }
 
+/**
+ * HTMLからAmazon注文番号を正規表現で抽出する。
+ * HTMLテキスト中の最初の出現を返す（メール本文の主要注文番号は通常最初に登場する）。
+ */
+function extractAmazonOrderNumber(html: string): string | null {
+  // HTMLタグを除去してテキスト化（注文番号周辺のテキストを正確に取得するため）
+  const text = html.replace(/<[^>]+>/g, " ");
+  // 「注文番号」というラベルの直後にある注文番号を優先的に抽出
+  const labeledMatch = text.match(/注文番号\s*[‫\s]*(\d{3}-\d{7}-\d{7})/);
+  if (labeledMatch) return labeledMatch[1];
+  // フォールバック: 最初に出現する注文番号パターン
+  const match = text.match(/\b(\d{3}-\d{7}-\d{7})\b/);
+  return match ? match[1] : null;
+}
+
 export async function analyzeEmailWithGemini(
   emailHtml: string,
   apiKey: string,
@@ -210,8 +225,18 @@ export async function analyzeEmailWithGemini(
 
   const prompt = getPromptForSource(source);
   const subjectLine = subject ? `\nメール件名: ${subject}\n` : "";
+
+  // Amazon: 正規表現で注文番号を事前抽出してヒントとして渡す
+  let orderNumberHint = "";
+  if (source === "amazon") {
+    const extracted = extractAmazonOrderNumber(emailHtml);
+    if (extracted) {
+      orderNumberHint = `\nこのメールの主要な注文番号: ${extracted}\n`;
+    }
+  }
+
   const result = await withRetry(
-    () => model.generateContent(prompt + subjectLine + "\nメール本文:\n" + truncatedHtml),
+    () => model.generateContent(prompt + subjectLine + orderNumberHint + "\nメール本文:\n" + truncatedHtml),
     {
       maxRetries: 3,
       baseDelayMs: 1000,
@@ -243,7 +268,21 @@ export async function analyzeEmailWithGemini(
   }
 
   try {
-    return toParsedOrder(extracted as Record<string, unknown>, source);
+    const order = toParsedOrder(extracted as Record<string, unknown>, source);
+
+    // Amazon: 正規表現で抽出した注文番号とGeminiの結果が異なる場合、正規表現を優先
+    if (source === "amazon") {
+      const regexOrderNumber = extractAmazonOrderNumber(emailHtml);
+      if (regexOrderNumber && order.orderNumber !== regexOrderNumber) {
+        logger.warn("Order number mismatch: Gemini extracted different order number", {
+          gemini: order.orderNumber,
+          regex: regexOrderNumber,
+        });
+        order.orderNumber = regexOrderNumber;
+      }
+    }
+
+    return order;
   } catch {
     return null;
   }
