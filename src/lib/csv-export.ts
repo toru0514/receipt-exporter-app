@@ -1,9 +1,5 @@
-import { ParsedOrder, EmailSource } from "./types";
-
-function getDefaultReceiptUrl(source: EmailSource, orderNumber: string): string {
-  if (source === "rakuten") return "https://order.my.rakuten.co.jp/";
-  return `https://www.amazon.co.jp/gp/css/summary/print.html?orderID=${orderNumber}`;
-}
+import { ParsedOrder } from "./types";
+import { getDefaultReceiptUrl } from "./receipt-url";
 
 /**
  * CSV用にセル値をエスケープする

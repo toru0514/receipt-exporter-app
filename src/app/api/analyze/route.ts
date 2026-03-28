@@ -231,7 +231,6 @@ export async function PATCH(request: NextRequest) {
     // 成功した結果をキャッシュに保存
     for (const result of batchResult.results) {
       if (result.order) {
-        result.order.source = source;
         analysisCache.set(`${source}:${result.emailId}`, result.order);
       }
     }

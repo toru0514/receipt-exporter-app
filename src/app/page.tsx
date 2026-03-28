@@ -85,26 +85,36 @@ export default function Home() {
     setResults([]);
     setAnalyzeProgress({ current: 0, total: selected.length });
 
-    const newResults: AnalysisResult[] = [];
-    for (const email of selected) {
-      try {
-        const res = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ emailHtml: email.body, emailId: email.id, source: provider }),
-        });
-        if (!res.ok) throw new Error("Analysis failed");
-        const data = await res.json();
-        newResults.push({ email, order: data.order });
-      } catch (error) {
-        newResults.push({
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emails: selected.map((e) => ({ id: e.id, body: e.body })),
+          source: provider,
+        }),
+      });
+      if (!res.ok) throw new Error("Batch analysis failed");
+      const data = await res.json();
+
+      const newResults: AnalysisResult[] = selected.map((email) => {
+        const batchItem = data.results.find(
+          (r: { emailId: string; order: ParsedOrder | null; error?: string }) => r.emailId === email.id
+        );
+        if (batchItem?.order) {
+          return { email, order: batchItem.order };
+        }
+        return {
           email,
           order: null,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
-      setResults([...newResults]);
-      setAnalyzeProgress({ current: newResults.length, total: selected.length });
+          error: batchItem?.error ?? "解析結果が見つかりません",
+        };
+      });
+      setResults(newResults);
+      setAnalyzeProgress({ current: selected.length, total: selected.length });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      setResults(selected.map((email) => ({ email, order: null, error: errorMsg })));
     }
     setLoading(null);
     setLoadingPhase(null);

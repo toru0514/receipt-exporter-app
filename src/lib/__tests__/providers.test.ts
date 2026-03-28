@@ -100,6 +100,15 @@ describe("AmazonProvider", () => {
       "https://www.amazon.co.jp/gp/css/summary/print.html?orderID=250-1234567-7654321"
     );
   });
+
+  it("メッセージが0件の場合は空配列を返す", async () => {
+    mockMessagesList.mockResolvedValue({
+      data: { messages: [] },
+    });
+
+    const result = await provider.getEmails("token", {});
+    expect(result.emails).toHaveLength(0);
+  });
 });
 
 describe("RakutenProvider", () => {
@@ -162,5 +171,14 @@ describe("RakutenProvider", () => {
   it("デフォルト領収書URLを返す", () => {
     const url = provider.getDefaultReceiptUrl("393703-20260110-0005400563");
     expect(url).toBe("https://order.my.rakuten.co.jp/");
+  });
+
+  it("メッセージが0件の場合は空配列を返す", async () => {
+    mockMessagesList.mockResolvedValue({
+      data: { messages: [] },
+    });
+
+    const result = await provider.getEmails("token", {});
+    expect(result.emails).toHaveLength(0);
   });
 });

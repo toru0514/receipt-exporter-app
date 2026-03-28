@@ -56,7 +56,12 @@ export async function GET(request: NextRequest) {
     const before = request.nextUrl.searchParams.get("before") ?? undefined;
     const regionParam = request.nextUrl.searchParams.get("region") ?? "jp";
 
-    const dateFilter = after || before ? { after, before } : undefined;
+    const dateFilter = after || before
+      ? {
+          ...(after !== undefined && { after }),
+          ...(before !== undefined && { before }),
+        }
+      : undefined;
 
     const provider = getProvider(source);
     const result = await provider.getEmails(session.accessToken, {
