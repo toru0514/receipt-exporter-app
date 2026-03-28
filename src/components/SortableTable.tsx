@@ -13,6 +13,7 @@ type SortDirection = "asc" | "desc";
 
 interface FlatRow {
   emailId: string;
+  emailSubject: string;
   orderDate: string;
   orderNumber: string;
   itemName: string;
@@ -31,6 +32,7 @@ function flattenResults(results: AnalysisResult[]): FlatRow[] {
     for (const item of order.items) {
       rows.push({
         emailId: result.email.id,
+        emailSubject: result.email.subject,
         orderDate: order.orderDate,
         orderNumber: order.orderNumber,
         itemName: item.name,
@@ -129,6 +131,7 @@ export default function SortableTable({ results }: SortableTableProps) {
                       <SortIndicator active={sortKey === "orderDate"} direction={sortDirection} />
                     </th>
                     <th className="whitespace-nowrap px-4 py-2">注文番号</th>
+                    <th className="whitespace-nowrap px-4 py-2">メール件名</th>
                     <th className="whitespace-nowrap px-4 py-2">ソース</th>
                     <th
                       className="cursor-pointer select-none whitespace-nowrap px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -159,6 +162,9 @@ export default function SortableTable({ results }: SortableTableProps) {
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 font-mono text-xs dark:text-gray-200">
                         {row.orderNumber}
+                      </td>
+                      <td className="max-w-[200px] truncate px-4 py-2 text-xs text-gray-500 dark:text-gray-400" title={row.emailSubject}>
+                        {row.emailSubject}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 dark:text-gray-200">
                         {row.source === "amazon" ? "Amazon" : "楽天"}
