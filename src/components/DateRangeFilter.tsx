@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 
+function getDefaultDates() {
+  const today = new Date();
+  const oneMonthAgo = new Date(today);
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  return {
+    after: oneMonthAgo.toISOString().split("T")[0],
+    before: today.toISOString().split("T")[0],
+  };
+}
+
 interface DateRangeFilterProps {
   onApply: (after: string, before: string) => void;
   disabled?: boolean;
@@ -11,8 +21,9 @@ export default function DateRangeFilter({
   onApply,
   disabled = false,
 }: DateRangeFilterProps) {
-  const [after, setAfter] = useState("");
-  const [before, setBefore] = useState("");
+  const defaults = getDefaultDates();
+  const [after, setAfter] = useState(defaults.after);
+  const [before, setBefore] = useState(defaults.before);
 
   const handleApply = () => {
     onApply(after, before);

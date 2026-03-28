@@ -30,9 +30,15 @@ export default function Home() {
     total: 0,
   });
 
-  // 日付フィルタ
-  const [dateAfter, setDateAfter] = useState("");
-  const [dateBefore, setDateBefore] = useState("");
+  // 日付フィルタ（デフォルト: 1ヶ月前〜本日）
+  const [dateAfter, setDateAfter] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().split("T")[0];
+  });
+  const [dateBefore, setDateBefore] = useState(() => {
+    return new Date().toISOString().split("T")[0];
+  });
 
   // 検索キーワードフィルタ
   const [searchKeyword, setSearchKeyword] = useState("");
