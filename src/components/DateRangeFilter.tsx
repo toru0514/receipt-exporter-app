@@ -25,10 +25,6 @@ export default function DateRangeFilter({
   const [after, setAfter] = useState(defaults.after);
   const [before, setBefore] = useState(defaults.before);
 
-  const handleApply = () => {
-    onApply(after, before);
-  };
-
   const handleClear = () => {
     setAfter("");
     setBefore("");
@@ -48,7 +44,10 @@ export default function DateRangeFilter({
           id="date-after"
           type="date"
           value={after}
-          onChange={(e) => setAfter(e.target.value)}
+          onChange={(e) => {
+            setAfter(e.target.value);
+            onApply(e.target.value, before);
+          }}
           disabled={disabled}
           className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
         />
@@ -64,29 +63,23 @@ export default function DateRangeFilter({
           id="date-before"
           type="date"
           value={before}
-          onChange={(e) => setBefore(e.target.value)}
+          onChange={(e) => {
+            setBefore(e.target.value);
+            onApply(after, e.target.value);
+          }}
           disabled={disabled}
           className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
         />
       </div>
-      <div className="flex gap-2">
+      {(after || before) && (
         <button
-          onClick={handleApply}
-          disabled={disabled || (!after && !before)}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+          onClick={handleClear}
+          disabled={disabled}
+          className="self-end rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
         >
-          適用
+          クリア
         </button>
-        {(after || before) && (
-          <button
-            onClick={handleClear}
-            disabled={disabled}
-            className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-          >
-            クリア
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }
