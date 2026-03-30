@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       category: analysis.category,
       memo: "",
       analyzedAt: new Date().toISOString(),
+      source: "photo",
     });
 
     return NextResponse.json({ receipt, analysis }, { status: 201 });

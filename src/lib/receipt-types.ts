@@ -4,6 +4,8 @@ export interface ReceiptItem {
   price: number;
 }
 
+export type ReceiptSource = "amazon" | "rakuten" | "photo";
+
 export interface Receipt {
   id: string;
   imageUrl: string;
@@ -18,10 +20,13 @@ export interface Receipt {
   analyzedAt: string; // ISO 8601
   createdAt: string;
   updatedAt: string;
+  source: ReceiptSource;
+  orderNumber: string;
+  receiptUrl: string;
 }
 
 export interface ReceiptCreateInput {
-  image: string; // base64 data URL
+  image?: string; // base64 data URL (optional for Amazon/Rakuten)
   date: string;
   storeName: string;
   totalAmount: number;
@@ -31,6 +36,9 @@ export interface ReceiptCreateInput {
   category: string;
   memo: string;
   analyzedAt: string;
+  source: ReceiptSource;
+  orderNumber?: string;
+  receiptUrl?: string;
 }
 
 export interface MonthlyAggregation {

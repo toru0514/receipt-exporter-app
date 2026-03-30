@@ -33,6 +33,7 @@ export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
@@ -59,28 +60,38 @@ export default function ReceiptsPage() {
     fetchReceipts();
   }, [fetchReceipts]);
 
-  const handleCapture = async (imageDataUrl: string) => {
+  const handleAnalyze = async (images: string[]) => {
     setUploading(true);
-    try {
-      const compressed = await compressImage(imageDataUrl);
-      const res = await fetch("/api/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: compressed }),
-      });
+    setUploadProgress({ current: 0, total: images.length });
+    let successCount = 0;
+    let errorCount = 0;
 
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || "登録に失敗しました");
-        return;
+    for (let i = 0; i < images.length; i++) {
+      setUploadProgress({ current: i + 1, total: images.length });
+      try {
+        const compressed = await compressImage(images[i]);
+        const res = await fetch("/api/receipts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: compressed }),
+        });
+
+        if (!res.ok) {
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      } catch {
+        errorCount++;
       }
-
-      await fetchReceipts();
-    } catch {
-      alert("登録に失敗しました");
-    } finally {
-      setUploading(false);
     }
+
+    if (errorCount > 0) {
+      alert(`${successCount}件成功、${errorCount}件失敗`);
+    }
+    await fetchReceipts();
+    setUploading(false);
+    setUploadProgress({ current: 0, total: 0 });
   };
 
   const handleDelete = async (id: string) => {
@@ -115,7 +126,7 @@ export default function ReceiptsPage() {
           <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
             領収書を登録
           </h3>
-          <ReceiptCapture onCapture={handleCapture} disabled={uploading} />
+          <ReceiptCapture onAnalyze={handleAnalyze} disabled={uploading} />
           {uploading && (
             <div className="mt-3 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
               <svg
@@ -137,7 +148,7 @@ export default function ReceiptsPage() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              画像を解析中...
+              画像を解析中... ({uploadProgress.current}/{uploadProgress.total})
             </div>
           )}
         </section>
@@ -169,11 +180,39 @@ export default function ReceiptsPage() {
             </select>
           </div>
 
-          <BulkDownloadButton
-            year={year}
-            month={month}
-            disabled={receipts.length === 0}
-          />
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                const params = new URLSearchParams({
+                  year: String(year),
+                  month: String(month),
+                });
+                const res = await fetch(`/api/receipts/csv?${params}`);
+                if (!res.ok) {
+                  alert("CSVダウンロードに失敗しました");
+                  return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `receipts_${year}_${String(month).padStart(2, "0")}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              disabled={receipts.length === 0}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
+              CSVダウンロード
+            </button>
+            <BulkDownloadButton
+              year={year}
+              month={month}
+              disabled={receipts.length === 0}
+            />
+          </div>
         </section>
 
         {/* 月別集計 */}

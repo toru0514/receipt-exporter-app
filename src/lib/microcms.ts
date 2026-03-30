@@ -1,5 +1,7 @@
 import { createClient } from "microcms-js-sdk";
-import type { Receipt, ReceiptCreateInput } from "./receipt-types";
+import type { Receipt, ReceiptCreateInput, ReceiptSource } from "./receipt-types";
+import type { ParsedOrder } from "./types";
+import { getDefaultReceiptUrl } from "./receipt-url";
 
 function getClient() {
   const serviceDomain = process.env.MICROCMS_SERVICE_DOMAIN;
@@ -28,6 +30,9 @@ interface MicroCMSReceiptResponse {
   category?: string;
   memo?: string;
   analyzedAt?: string;
+  source?: string;
+  orderNumber?: string;
+  receiptUrl?: string;
 }
 
 function toReceipt(item: MicroCMSReceiptResponse): Receipt {
@@ -52,15 +57,19 @@ function toReceipt(item: MicroCMSReceiptResponse): Receipt {
     analyzedAt: item.analyzedAt ?? "",
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
+    source: (item.source as ReceiptSource) ?? "photo",
+    orderNumber: item.orderNumber ?? "",
+    receiptUrl: item.receiptUrl ?? "",
   };
 }
 
-/** 領収書一覧を取得（月別フィルタ対応） */
+/** 領収書一覧を取得（月別・ソースフィルタ対応） */
 export async function getReceipts(params?: {
   year?: number;
   month?: number;
   limit?: number;
   offset?: number;
+  source?: ReceiptSource;
 }): Promise<{ receipts: Receipt[]; totalCount: number }> {
   const client = getClient();
   const limit = params?.limit ?? 100;
@@ -72,11 +81,14 @@ export async function getReceipts(params?: {
     const endMonth = params.month === 12 ? 1 : params.month + 1;
     const endYear = params.month === 12 ? params.year + 1 : params.year;
     const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
-    filters.push(`date[greater_than]${startDate}`);
+    filters.push(`date[greater_equal]${startDate}`);
     filters.push(`date[less_than]${endDate}`);
   } else if (params?.year) {
-    filters.push(`date[greater_than]${params.year}-01-01`);
+    filters.push(`date[greater_equal]${params.year}-01-01`);
     filters.push(`date[less_than]${params.year + 1}-01-01`);
+  }
+  if (params?.source) {
+    filters.push(`source[equals]${params.source}`);
   }
 
   const response = await client.getList<MicroCMSReceiptResponse>({
@@ -151,23 +163,33 @@ export async function createReceipt(
 ): Promise<Receipt> {
   const client = getClient();
 
-  // 画像をアップロード
-  const imageUrl = await uploadImage(input.image);
+  // 画像がある場合のみアップロード
+  let imageUrl = "";
+  if (input.image) {
+    imageUrl = await uploadImage(input.image);
+  }
+
+  const content: Record<string, unknown> = {
+    date: input.date,
+    storeName: input.storeName,
+    totalAmount: input.totalAmount,
+    tax: input.tax,
+    items: JSON.stringify(input.items),
+    paymentMethod: input.paymentMethod,
+    category: input.category,
+    memo: input.memo,
+    analyzedAt: input.analyzedAt,
+    source: input.source,
+    orderNumber: input.orderNumber ?? "",
+    receiptUrl: input.receiptUrl ?? "",
+  };
+  if (imageUrl) {
+    content.image = imageUrl;
+  }
 
   const response = await client.create<MicroCMSReceiptResponse>({
     endpoint: "receipts",
-    content: {
-      image: imageUrl,
-      date: input.date,
-      storeName: input.storeName,
-      totalAmount: input.totalAmount,
-      tax: input.tax,
-      items: JSON.stringify(input.items),
-      paymentMethod: input.paymentMethod,
-      category: input.category,
-      memo: input.memo,
-      analyzedAt: input.analyzedAt,
-    } as unknown as MicroCMSReceiptResponse,
+    content: content as unknown as MicroCMSReceiptResponse,
   });
 
   return {
@@ -184,7 +206,50 @@ export async function createReceipt(
     analyzedAt: input.analyzedAt,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    source: input.source,
+    orderNumber: input.orderNumber ?? "",
+    receiptUrl: input.receiptUrl ?? "",
   };
+}
+
+/** 注文番号で既存レシートを検索（重複チェック用） */
+export async function findReceiptByOrderNumber(
+  orderNumber: string
+): Promise<Receipt | null> {
+  const client = getClient();
+  const response = await client.getList<MicroCMSReceiptResponse>({
+    endpoint: "receipts",
+    queries: {
+      filters: `orderNumber[equals]${orderNumber}`,
+      limit: 1,
+    },
+  });
+  if (response.contents.length === 0) return null;
+  return toReceipt(response.contents[0]);
+}
+
+/** ParsedOrder から Receipt を作成してmicroCMSに保存 */
+export async function createReceiptFromOrder(
+  order: ParsedOrder
+): Promise<Receipt> {
+  const storeName = order.source === "amazon" ? "Amazon" : "楽天市場";
+  const receiptUrl =
+    order.receiptUrl || getDefaultReceiptUrl(order.source, order.orderNumber);
+
+  return createReceipt({
+    date: order.orderDate,
+    storeName,
+    totalAmount: order.totalAmount,
+    tax: order.tax,
+    items: order.items,
+    paymentMethod: "",
+    category: "",
+    memo: "",
+    analyzedAt: new Date().toISOString(),
+    source: order.source,
+    orderNumber: order.orderNumber,
+    receiptUrl,
+  });
 }
 
 /** 領収書を削除 */
