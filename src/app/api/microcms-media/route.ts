@@ -30,10 +30,12 @@ export async function GET() {
     }
 
     const data = await response.json();
-    // 画像のみフィルタ
-    const images = (data.media ?? []).filter(
-      (item: { contentType?: string }) =>
-        item.contentType?.startsWith("image/")
+    // メディアAPIは画像のみ返すため、そのまま利用
+    const images = (data.media ?? []).map(
+      (item: { url: string; id: string; width?: number; height?: number }) => ({
+        url: item.url,
+        id: item.id,
+      })
     );
 
     return NextResponse.json({ media: images });

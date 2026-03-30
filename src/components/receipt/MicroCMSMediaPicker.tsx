@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 
 interface MediaItem {
   url: string;
-  contentType: string;
-  createdAt: string;
+  id: string;
 }
 
 interface MicroCMSMediaPickerProps {
