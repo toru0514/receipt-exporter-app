@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "microcms": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "TMPFILE=$(mktemp) && vercel env pull \"$TMPFILE\" 2>/dev/null && . \"$TMPFILE\" && rm \"$TMPFILE\" && MICROCMS_SERVICE_ID=\"$MICROCMS_SERVICE_DOMAIN\" exec npx -y microcms-mcp-server@latest"
+      ]
+    }
+  }
+}
