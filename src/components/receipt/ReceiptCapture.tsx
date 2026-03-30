@@ -220,7 +220,7 @@ export default function ReceiptCapture({
             type="button"
             onClick={handleAnalyze}
             disabled={disabled}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-3 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50 dark:bg-orange-500 dark:hover:bg-orange-600"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
           >
             <svg
               className="h-5 w-5"
@@ -245,9 +245,9 @@ export default function ReceiptCapture({
         <MicroCMSMediaPicker
           onSelect={(imageDataUrl) => {
             addImage(imageDataUrl);
-            setShowMediaPicker(false);
           }}
           onClose={() => setShowMediaPicker(false)}
+          multiple
         />
       )}
     </div>

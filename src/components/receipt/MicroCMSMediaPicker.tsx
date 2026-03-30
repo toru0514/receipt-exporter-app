@@ -10,15 +10,19 @@ interface MediaItem {
 interface MicroCMSMediaPickerProps {
   onSelect: (imageUrl: string) => void;
   onClose: () => void;
+  multiple?: boolean;
 }
 
 export default function MicroCMSMediaPicker({
   onSelect,
   onClose,
+  multiple,
 }: MicroCMSMediaPickerProps) {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     async function fetchMedia() {
@@ -36,8 +40,41 @@ export default function MicroCMSMediaPicker({
     fetchMedia();
   }, []);
 
-  const handleSelect = async (url: string) => {
-    // 画像URLをbase64 data URLに変換してonSelectに渡す
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleConfirm = async () => {
+    const selected = media.filter((item) => selectedIds.has(item.id));
+    if (selected.length === 0) return;
+
+    setConverting(true);
+    for (const item of selected) {
+      try {
+        const res = await fetch(item.url);
+        const blob = await res.blob();
+        const reader = new FileReader();
+        await new Promise<void>((resolve) => {
+          reader.onload = () => {
+            onSelect(reader.result as string);
+            resolve();
+          };
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        // skip failed items
+      }
+    }
+    setConverting(false);
+    onClose();
+  };
+
+  const handleSingleSelect = async (url: string) => {
     try {
       const res = await fetch(url);
       const blob = await res.blob();
@@ -58,25 +95,41 @@ export default function MicroCMSMediaPicker({
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             microCMSメディアから選択
+            {multiple && selectedIds.size > 0 && (
+              <span className="ml-2 text-sm font-normal text-blue-600 dark:text-blue-400">
+                {selectedIds.size}件選択中
+              </span>
+            )}
           </h3>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          <div className="flex items-center gap-2">
+            {multiple && selectedIds.size > 0 && (
+              <button
+                onClick={handleConfirm}
+                disabled={converting}
+                className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+              >
+                {converting ? "読み込み中..." : `${selectedIds.size}件を追加`}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded-full p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* コンテンツ */}
@@ -119,15 +172,28 @@ export default function MicroCMSMediaPicker({
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
               {media.map((item) => (
                 <button
-                  key={item.url}
-                  onClick={() => handleSelect(item.url)}
-                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                  key={item.id}
+                  onClick={() =>
+                    multiple
+                      ? toggleSelect(item.id)
+                      : handleSingleSelect(item.url)
+                  }
+                  className={`group relative aspect-square overflow-hidden rounded-lg border-2 focus:outline-none ${
+                    selectedIds.has(item.id)
+                      ? "border-blue-500 ring-2 ring-blue-300 dark:ring-blue-700"
+                      : "border-transparent hover:border-blue-500"
+                  }`}
                 >
                   <img
                     src={item.url}
                     alt="メディア画像"
                     className="h-full w-full object-cover transition-transform group-hover:scale-105"
                   />
+                  {multiple && selectedIds.has(item.id) && (
+                    <div className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                      ✓
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
