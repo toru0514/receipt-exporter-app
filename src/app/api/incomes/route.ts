@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIncomes, createIncome, deleteIncome } from "@/lib/microcms";
+import { getIncomes, createIncome, deleteIncome } from "@/lib/income-db";
 import type { IncomeCreateInput } from "@/lib/income-types";
 
 /** GET: 入金一覧取得（月別フィルタ対応） */

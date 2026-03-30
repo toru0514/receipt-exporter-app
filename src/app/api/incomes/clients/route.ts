@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDistinctClients } from "@/lib/microcms";
+import { getDistinctClients } from "@/lib/income-db";
 
 /** GET: 過去の客先名一覧（コンボボックス用） */
 export async function GET() {
