@@ -4,18 +4,22 @@ import { useRef, useState, useCallback } from "react";
 import MicroCMSMediaPicker from "./MicroCMSMediaPicker";
 
 interface ReceiptCaptureProps {
-  onCapture: (imageDataUrl: string) => void;
+  onAnalyze: (images: string[]) => void;
   disabled?: boolean;
 }
 
 export default function ReceiptCapture({
-  onCapture,
+  onAnalyze,
   disabled,
 }: ReceiptCaptureProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
+
+  const addImage = useCallback((dataUrl: string) => {
+    setSelectedImages((prev) => [...prev, dataUrl]);
+  }, []);
 
   const handleFile = useCallback(
     (file: File) => {
@@ -24,7 +28,6 @@ export default function ReceiptCapture({
         return;
       }
 
-      // 10MB制限
       if (file.size > 10 * 1024 * 1024) {
         alert("ファイルサイズは10MB以下にしてください");
         return;
@@ -33,19 +36,19 @@ export default function ReceiptCapture({
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
-        setPreview(dataUrl);
-        onCapture(dataUrl);
+        addImage(dataUrl);
       };
       reader.readAsDataURL(file);
     },
-    [onCapture]
+    [addImage]
   );
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
-      // inputをリセットして同じファイルを再選択可能にする
+      const files = e.target.files;
+      if (files) {
+        Array.from(files).forEach((file) => handleFile(file));
+      }
       e.target.value = "";
     },
     [handleFile]
@@ -54,16 +57,28 @@ export default function ReceiptCapture({
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const file = e.dataTransfer.files?.[0];
-      if (file) handleFile(file);
+      const files = e.dataTransfer.files;
+      if (files) {
+        Array.from(files).forEach((file) => handleFile(file));
+      }
     },
     [handleFile]
   );
 
+  const removeImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAnalyze = () => {
+    if (selectedImages.length === 0) return;
+    onAnalyze(selectedImages);
+    setSelectedImages([]);
+  };
+
   return (
     <div className="space-y-4">
       {/* ボタンエリア */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button
           type="button"
           onClick={() => cameraInputRef.current?.click()}
@@ -150,36 +165,65 @@ export default function ReceiptCapture({
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleInputChange}
         className="hidden"
       />
 
       {/* ドラッグ&ドロップエリア */}
-      {!preview && (
+      {selectedImages.length === 0 && (
         <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
           className="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400"
         >
-          ここに画像をドラッグ&ドロップ
+          ここに画像をドラッグ&ドロップ（複数可）
         </div>
       )}
 
-      {/* プレビュー */}
-      {preview && (
-        <div className="relative">
-          <img
-            src={preview}
-            alt="領収書プレビュー"
-            className="max-h-64 rounded-lg border border-gray-200 object-contain dark:border-gray-700"
-          />
+      {/* 選択済み画像のサムネイル */}
+      {selectedImages.length > 0 && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+            {selectedImages.map((img, index) => (
+              <div key={index} className="relative aspect-square">
+                <img
+                  src={img}
+                  alt={`選択画像 ${index + 1}`}
+                  className="h-full w-full rounded-lg border border-gray-200 object-cover dark:border-gray-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(index)}
+                  className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white shadow hover:bg-red-600"
+                >
+                  <svg
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* 解析ボタン */}
           <button
             type="button"
-            onClick={() => setPreview(null)}
-            className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+            onClick={handleAnalyze}
+            disabled={disabled}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-3 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50 dark:bg-orange-500 dark:hover:bg-orange-600"
           >
             <svg
-              className="h-4 w-4"
+              className="h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -188,18 +232,19 @@ export default function ReceiptCapture({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
+            {selectedImages.length}枚の画像を解析する
           </button>
         </div>
       )}
+
       {/* microCMSメディア選択モーダル */}
       {showMediaPicker && (
         <MicroCMSMediaPicker
           onSelect={(imageDataUrl) => {
-            setPreview(imageDataUrl);
-            onCapture(imageDataUrl);
+            addImage(imageDataUrl);
             setShowMediaPicker(false);
           }}
           onClose={() => setShowMediaPicker(false)}

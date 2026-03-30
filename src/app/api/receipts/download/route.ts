@@ -26,9 +26,12 @@ export async function GET(request: NextRequest) {
       limit: 500,
     });
 
-    if (receipts.length === 0) {
+    // 画像付きレシートのみ対象
+    const imageReceipts = receipts.filter((r) => r.imageUrl);
+
+    if (imageReceipts.length === 0) {
       return NextResponse.json(
-        { error: "該当する領収書がありません" },
+        { error: "画像付きの領収書がありません" },
         { status: 404 }
       );
     }
@@ -41,23 +44,33 @@ export async function GET(request: NextRequest) {
 
     // 各画像をダウンロードしてZIPに追加
     let index = 0;
-    for (const receipt of receipts) {
-      if (!receipt.imageUrl) continue;
-
+    for (const receipt of imageReceipts) {
       try {
-        const imageResponse = await fetch(receipt.imageUrl);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const imageResponse = await fetch(receipt.imageUrl, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
         if (!imageResponse.ok) continue;
 
         const imageBuffer = await imageResponse.arrayBuffer();
         const ext = receipt.imageUrl.includes(".png") ? "png" : "jpg";
         const fileName = `${receipt.date}_${receipt.storeName || "unknown"}_${index}.${ext}`;
-        // ファイル名に使えない文字を除去
         const safeFileName = fileName.replace(/[/\\:*?"<>|]/g, "_");
         folder.file(safeFileName, imageBuffer);
         index++;
       } catch (err) {
         console.warn(`画像ダウンロードスキップ: ${receipt.imageUrl}`, err);
       }
+    }
+
+    if (index === 0) {
+      return NextResponse.json(
+        { error: "画像のダウンロードに失敗しました" },
+        { status: 500 }
+      );
     }
 
     const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });

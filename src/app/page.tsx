@@ -215,6 +215,35 @@ export default function Home() {
     });
   }, [results, searchKeyword]);
 
+  const saveToMicroCMS = useCallback(async () => {
+    const orders = results
+      .filter((r) => r.order)
+      .map((r) => r.order as ParsedOrder);
+    if (orders.length === 0) {
+      alert("保存するデータがありません");
+      return;
+    }
+
+    setLoading("microCMSに保存中...");
+    try {
+      const res = await fetch("/api/receipts/save-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orders }),
+      });
+      if (!res.ok) throw new Error("保存に失敗しました");
+      const data = await res.json();
+      alert(
+        `保存完了: ${data.saved}件保存、${data.skipped}件スキップ（重複）${data.errors > 0 ? `、${data.errors}件エラー` : ""}`
+      );
+    } catch (error) {
+      console.error(error);
+      alert("microCMSへの保存に失敗しました");
+    } finally {
+      setLoading(null);
+    }
+  }, [results]);
+
   // CSV用の注文データ
   const exportableOrders = useMemo(() => {
     return filteredResults
@@ -447,6 +476,13 @@ export default function Home() {
                     orders={exportableOrders}
                     disabled={!!loading}
                   />
+                  <button
+                    onClick={saveToMicroCMS}
+                    disabled={!!loading}
+                    className="flex-1 rounded-md bg-purple-600 px-4 py-2.5 text-sm text-white hover:bg-purple-700 disabled:opacity-50 sm:flex-none sm:py-2 dark:bg-purple-500 dark:hover:bg-purple-600"
+                  >
+                    microCMSに保存
+                  </button>
                 </div>
               </div>
             </div>
