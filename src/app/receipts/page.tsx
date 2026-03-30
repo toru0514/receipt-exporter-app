@@ -9,6 +9,23 @@ import ReceiptDetail from "@/components/receipt/ReceiptDetail";
 import BulkDownloadButton from "@/components/receipt/BulkDownloadButton";
 import type { Receipt } from "@/lib/receipt-types";
 
+/** 画像をリサイズして圧縮する（Vercelの4.5MBリクエスト制限対策） */
+function compressImage(dataUrl: string, maxWidth = 1600): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.src = dataUrl;
+  });
+}
+
 export default function ReceiptsPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -45,10 +62,11 @@ export default function ReceiptsPage() {
   const handleCapture = async (imageDataUrl: string) => {
     setUploading(true);
     try {
+      const compressed = await compressImage(imageDataUrl);
       const res = await fetch("/api/receipts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageDataUrl }),
+        body: JSON.stringify({ image: compressed }),
       });
 
       if (!res.ok) {
