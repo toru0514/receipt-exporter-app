@@ -157,7 +157,7 @@ export async function createReceipt(
   const response = await client.create<MicroCMSReceiptResponse>({
     endpoint: "receipts",
     content: {
-      image: { url: imageUrl },
+      image: imageUrl,
       date: input.date,
       storeName: input.storeName,
       totalAmount: input.totalAmount,
