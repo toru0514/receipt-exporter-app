@@ -88,8 +88,11 @@ export default function MicroCMSMediaPicker({
   const handleSingleSelect = async (url: string) => {
     if (rawUrl) {
       onSelect(url);
+      onClose();
       return;
     }
+
+
     try {
       const res = await fetch(url);
       const blob = await res.blob();

@@ -2,6 +2,7 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useState, useCallback, useMemo } from "react";
+import FinancialSummary from "@/components/FinancialSummary";
 
 import EmailList from "@/components/EmailList";
 import SortableTable from "@/components/SortableTable";
@@ -303,6 +304,11 @@ export default function Home() {
   return (
     <>
       <main className="mx-auto max-w-5xl px-4 py-4 sm:py-6">
+        {/* 収支サマリー */}
+        <div className="mb-6">
+          <FinancialSummary />
+        </div>
+
         {/* Provider Tab */}
         <div className="mb-4 flex border-b border-gray-200 dark:border-gray-700">
           {(["amazon", "rakuten"] as const).map((p) => (
