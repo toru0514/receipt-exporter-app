@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   findReceiptByOrderNumber,
   createReceiptFromOrder,
-} from "@/lib/microcms";
+} from "@/lib/receipt-db";
 import type { ParsedOrder } from "@/lib/types";
 
-/** POST: 解析済み注文をmicroCMSに一括保存（重複スキップ） */
+/** POST: 解析済み注文をSupabaseに一括保存（重複スキップ） */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
