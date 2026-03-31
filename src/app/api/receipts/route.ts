@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReceipts, createReceipt, deleteReceipt } from "@/lib/microcms";
+import { getReceipts, createReceipt, createReceiptWithUrl, deleteReceipt } from "@/lib/microcms";
 import { analyzeReceiptImage } from "@/lib/gemini-receipt";
 
 /** GET: 領収書一覧取得（月別フィルタ対応） */
@@ -28,15 +28,25 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/** URLから画像を取得してbase64に変換 */
+async function fetchImageAsBase64(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("画像の取得に失敗しました");
+  const buffer = await res.arrayBuffer();
+  const contentType = res.headers.get("content-type") || "image/jpeg";
+  const base64 = Buffer.from(buffer).toString("base64");
+  return `data:${contentType};base64,${base64}`;
+}
+
 /** POST: 画像をアップロード → Gemini解析 → microCMSに保存 */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { image } = body as { image: string };
+    const { image, imageUrl } = body as { image?: string; imageUrl?: string };
 
-    if (!image) {
+    if (!image && !imageUrl) {
       return NextResponse.json(
-        { error: "画像データが必要です" },
+        { error: "画像データまたは画像URLが必要です" },
         { status: 400 }
       );
     }
@@ -49,8 +59,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // microCMS URLの場合はbase64に変換してGemini解析に使う
+    const imageForAnalysis = image || (await fetchImageAsBase64(imageUrl!));
+
     // Geminiで画像解析
-    const analysis = await analyzeReceiptImage(image, apiKey);
+    const analysis = await analyzeReceiptImage(imageForAnalysis, apiKey);
     if (!analysis) {
       return NextResponse.json(
         { error: "領収書の解析に失敗しました。画像を確認してください。" },
@@ -58,19 +71,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // microCMSに保存
-    const receipt = await createReceipt({
-      image,
-      date: analysis.date,
-      storeName: analysis.storeName,
-      totalAmount: analysis.totalAmount,
-      tax: analysis.tax,
-      items: analysis.items,
-      paymentMethod: analysis.paymentMethod,
-      category: analysis.category,
-      memo: "",
-      analyzedAt: new Date().toISOString(),
-    });
+    // microCMSに保存（imageUrlの場合は再アップロード不要）
+    const receipt = imageUrl
+      ? await createReceiptWithUrl({
+          imageUrl,
+          date: analysis.date,
+          storeName: analysis.storeName,
+          totalAmount: analysis.totalAmount,
+          tax: analysis.tax,
+          items: analysis.items,
+          paymentMethod: analysis.paymentMethod,
+          category: analysis.category,
+          memo: "",
+          analyzedAt: new Date().toISOString(),
+        })
+      : await createReceipt({
+          image: image!,
+          date: analysis.date,
+          storeName: analysis.storeName,
+          totalAmount: analysis.totalAmount,
+          tax: analysis.tax,
+          items: analysis.items,
+          paymentMethod: analysis.paymentMethod,
+          category: analysis.category,
+          memo: "",
+          analyzedAt: new Date().toISOString(),
+        });
 
     return NextResponse.json({ receipt, analysis }, { status: 201 });
   } catch (error) {

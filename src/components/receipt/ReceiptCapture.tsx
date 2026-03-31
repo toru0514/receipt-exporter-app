@@ -1,19 +1,23 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import MicroCMSMediaPicker from "./MicroCMSMediaPicker";
 
 interface ReceiptCaptureProps {
   onCapture: (imageDataUrl: string) => void;
+  onSelectMediaUrl?: (imageUrl: string) => void;
   disabled?: boolean;
 }
 
 export default function ReceiptCapture({
   onCapture,
+  onSelectMediaUrl,
   disabled,
 }: ReceiptCaptureProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   const handleFile = useCallback(
     (file: File) => {
@@ -47,6 +51,19 @@ export default function ReceiptCapture({
       e.target.value = "";
     },
     [handleFile]
+  );
+
+  const handleMediaSelect = useCallback(
+    (imageUrl: string) => {
+      setPreview(imageUrl);
+      if (onSelectMediaUrl) {
+        onSelectMediaUrl(imageUrl);
+      } else {
+        onCapture(imageUrl);
+      }
+      setShowMediaPicker(false);
+    },
+    [onCapture, onSelectMediaUrl]
   );
 
   const handleDrop = useCallback(
@@ -111,6 +128,28 @@ export default function ReceiptCapture({
           </svg>
           ファイル選択
         </button>
+
+        <button
+          type="button"
+          onClick={() => setShowMediaPicker(true)}
+          disabled={disabled}
+          className="flex items-center gap-2 rounded-lg bg-emerald-100 px-4 py-2.5 text-sm font-medium text-emerald-700 hover:bg-emerald-200 disabled:opacity-50 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+        >
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+            />
+          </svg>
+          microCMSから選ぶ
+        </button>
       </div>
 
       {/* 隠しinput */}
@@ -170,6 +209,11 @@ export default function ReceiptCapture({
           </button>
         </div>
       )}
+      <MicroCMSMediaPicker
+        open={showMediaPicker}
+        onClose={() => setShowMediaPicker(false)}
+        onSelect={handleMediaSelect}
+      />
     </div>
   );
 }

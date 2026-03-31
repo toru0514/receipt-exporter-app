@@ -187,6 +187,45 @@ export async function createReceipt(
   };
 }
 
+/** 領収書を新規作成（既存のmicroCMS画像URLを使用） */
+export async function createReceiptWithUrl(
+  input: Omit<ReceiptCreateInput, "image"> & { imageUrl: string }
+): Promise<Receipt> {
+  const client = getClient();
+
+  const response = await client.create<MicroCMSReceiptResponse>({
+    endpoint: "receipts",
+    content: {
+      image: { url: input.imageUrl },
+      date: input.date,
+      storeName: input.storeName,
+      totalAmount: input.totalAmount,
+      tax: input.tax,
+      items: JSON.stringify(input.items),
+      paymentMethod: input.paymentMethod,
+      category: input.category,
+      memo: input.memo,
+      analyzedAt: input.analyzedAt,
+    } as unknown as MicroCMSReceiptResponse,
+  });
+
+  return {
+    id: response.id,
+    imageUrl: input.imageUrl,
+    date: input.date,
+    storeName: input.storeName,
+    totalAmount: input.totalAmount,
+    tax: input.tax,
+    items: input.items,
+    paymentMethod: input.paymentMethod,
+    category: input.category,
+    memo: input.memo,
+    analyzedAt: input.analyzedAt,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 /** 領収書を削除 */
 export async function deleteReceipt(id: string): Promise<void> {
   const client = getClient();

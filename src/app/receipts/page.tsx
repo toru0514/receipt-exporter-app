@@ -65,6 +65,29 @@ export default function ReceiptsPage() {
     }
   };
 
+  const handleSelectMediaUrl = async (imageUrl: string) => {
+    setUploading(true);
+    try {
+      const res = await fetch("/api/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "登録に失敗しました");
+        return;
+      }
+
+      await fetchReceipts();
+    } catch {
+      alert("登録に失敗しました");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/receipts?id=${id}`, { method: "DELETE" });
@@ -97,7 +120,7 @@ export default function ReceiptsPage() {
           <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
             領収書を登録
           </h3>
-          <ReceiptCapture onCapture={handleCapture} disabled={uploading} />
+          <ReceiptCapture onCapture={handleCapture} onSelectMediaUrl={handleSelectMediaUrl} disabled={uploading} />
           {uploading && (
             <div className="mt-3 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
               <svg
