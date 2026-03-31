@@ -1,4 +1,4 @@
-import { getSupabase } from "./supabase";
+import { getSupabase } from "./supabase/db";
 import type { Income, IncomeCreateInput } from "./income-types";
 
 /** 入金一覧を取得（月別フィルタ対応） */

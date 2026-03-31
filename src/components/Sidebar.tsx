@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useSidebar } from "@/components/SidebarContext";
 
@@ -49,7 +49,13 @@ const navItems = [
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   // モバイルメニューをページ遷移時に閉じる
   useEffect(() => {
@@ -120,20 +126,12 @@ export default function Sidebar() {
       <div className="border-t border-gray-200 px-2 py-3 dark:border-gray-700">
         <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between px-1"}`}>
           <ThemeToggle />
-          {!collapsed && status === "authenticated" && (
+          {!collapsed && (
             <button
-              onClick={() => signOut()}
+              onClick={handleLogout}
               className="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
             >
               ログアウト
-            </button>
-          )}
-          {!collapsed && status === "unauthenticated" && (
-            <button
-              onClick={() => signIn("google")}
-              className="rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-            >
-              ログイン
             </button>
           )}
         </div>
@@ -210,28 +208,19 @@ export default function Sidebar() {
               })}
             </nav>
             <div className="border-t border-gray-200 px-3 py-3 dark:border-gray-700">
-              {status === "authenticated" ? (
-                <div className="space-y-2">
-                  {session.user?.email && (
-                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                      {session.user.email}
-                    </p>
-                  )}
-                  <button
-                    onClick={() => signOut()}
-                    className="w-full rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                  >
-                    ログアウト
-                  </button>
-                </div>
-              ) : (
+              <div className="space-y-2">
+                {status === "authenticated" && session.user?.email && (
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {session.user.email}
+                  </p>
+                )}
                 <button
-                  onClick={() => signIn("google")}
-                  className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  onClick={handleLogout}
+                  className="w-full rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
-                  Googleでログイン
+                  ログアウト
                 </button>
-              )}
+              </div>
             </div>
           </aside>
         </div>

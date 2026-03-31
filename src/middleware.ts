@@ -1,20 +1,28 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
 /**
- * ミドルウェア: API ルートの基本的なセキュリティ保護
- *
- * - API レスポンスにセキュリティヘッダーを付与
- * - 環境変数の漏洩防止（レスポンスボディに API キー等が含まれないことを保証する
- *   のはサーバー側ロジックの責任だが、ここでは基本的なヘッダー保護を行う）
+ * ミドルウェア:
+ * - Supabase Auth によるルート保護（未認証 → /login リダイレクト）
+ * - API ルートのセキュリティヘッダー付与
+ * - 環境変数の漏洩防止
  */
-export function middleware(request: NextRequest) {
-  // API ルートの場合、不正なメソッドを拒否
-  if (request.nextUrl.pathname.startsWith("/api/")) {
-    const response = NextResponse.next();
+export async function middleware(request: NextRequest) {
+  // Supabase Auth セッション管理・ルート保護
+  const response = await updateSession(request);
 
-    // API レスポンスにキャッシュ制御ヘッダーを付与
-    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  // リダイレクトレスポンスの場合はそのまま返す
+  if (response.status === 307 || response.status === 308) {
+    return response;
+  }
+
+  // API ルートの場合、セキュリティヘッダーを付与
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate"
+    );
     response.headers.set("Pragma", "no-cache");
 
     // 環境変数名がクエリパラメータに含まれていたら拒否
@@ -27,19 +35,16 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.toString().toUpperCase();
     for (const pattern of sensitivePatterns) {
       if (url.includes(pattern)) {
-        return NextResponse.json(
-          { error: "Forbidden" },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
-
-    return response;
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

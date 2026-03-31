@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReceipts } from "@/lib/microcms";
 import { getIncomes } from "@/lib/income-db";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase/db";
 
 /** 出金合計を取得（テーブルが存在しない場合は0） */
 async function getExpensesTotal(params: {
