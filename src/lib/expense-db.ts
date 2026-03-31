@@ -1,6 +1,19 @@
 import { getSupabase } from "./supabase";
 import type { Expense, ExpenseCreateInput } from "./expense-types";
 
+/** DB行からphotoUrlsを復元する */
+function parsePhotoUrls(row: Record<string, unknown>): string[] {
+  // photo_urls (jsonb配列) を優先、なければ photo_url (旧カラム) にフォールバック
+  if (Array.isArray(row.photo_urls)) {
+    return row.photo_urls.filter((u: unknown) => typeof u === "string" && u !== "");
+  }
+  // 旧カラムが残っている場合の互換処理
+  if (typeof row.photo_url === "string" && row.photo_url !== "") {
+    return [row.photo_url];
+  }
+  return [];
+}
+
 /** 出金一覧を取得（月別フィルタ対応） */
 export async function getExpenses(params?: {
   year?: number;
@@ -40,7 +53,7 @@ export async function getExpenses(params?: {
     description: row.description ?? "",
     amount: row.amount ?? 0,
     notes: row.notes ?? "",
-    photoUrl: row.photo_url ?? "",
+    photoUrls: parsePhotoUrls(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -76,7 +89,7 @@ export async function createExpense(
       description: input.description,
       amount: input.amount,
       notes: input.notes,
-      photo_url: input.photoUrl,
+      photo_urls: input.photoUrls,
     })
     .select()
     .single();
@@ -90,7 +103,7 @@ export async function createExpense(
     description: data.description ?? "",
     amount: data.amount ?? 0,
     notes: data.notes ?? "",
-    photoUrl: data.photo_url ?? "",
+    photoUrls: parsePhotoUrls(data),
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };

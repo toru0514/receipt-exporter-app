@@ -5,7 +5,7 @@ export interface Expense {
   description: string; // 内容
   amount: number; // 金額
   notes: string; // 備考
-  photoUrl: string; // 写真URL
+  photoUrls: string[]; // 写真URL（複数）
   createdAt: string;
   updatedAt: string;
 }
@@ -16,5 +16,5 @@ export interface ExpenseCreateInput {
   description: string;
   amount: number;
   notes: string;
-  photoUrl: string;
+  photoUrls: string[];
 }

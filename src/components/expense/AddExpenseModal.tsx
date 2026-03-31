@@ -27,11 +27,23 @@ export default function AddExpenseModal({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoUrls, setPhotoUrls] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   if (!isOpen) return null;
+
+  const updatePhotoUrl = (index: number, value: string) => {
+    setPhotoUrls((prev) => prev.map((u, i) => (i === index ? value : u)));
+  };
+
+  const addPhotoUrl = () => {
+    setPhotoUrls((prev) => [...prev, ""]);
+  };
+
+  const removePhotoUrl = (index: number) => {
+    setPhotoUrls((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +68,7 @@ export default function AddExpenseModal({
         description: description.trim(),
         amount: parsedAmount,
         notes: notes.trim(),
-        photoUrl: photoUrl.trim(),
+        photoUrls: photoUrls.map((u) => u.trim()).filter((u) => u !== ""),
       });
       // Reset form
       setDate(todayString());
@@ -64,7 +76,7 @@ export default function AddExpenseModal({
       setDescription("");
       setAmount("");
       setNotes("");
-      setPhotoUrl("");
+      setPhotoUrls([""]);
       onClose();
     } catch {
       setError("登録に失敗しました");
@@ -164,13 +176,41 @@ export default function AddExpenseModal({
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               写真URL
             </label>
-            <input
-              type="url"
-              value={photoUrl}
-              onChange={(e) => setPhotoUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
-            />
+            <div className="space-y-2">
+              {photoUrls.map((url, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => updatePhotoUrl(index, e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+                  />
+                  {photoUrls.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePhotoUrl(index)}
+                      className="shrink-0 rounded-lg p-2 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                      title="削除"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addPhotoUrl}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                写真URLを追加
+              </button>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
