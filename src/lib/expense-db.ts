@@ -1,4 +1,4 @@
-import { getSupabase } from "./supabase";
+import { getSupabase } from "./supabase/db";
 import type { Expense, ExpenseCreateInput } from "./expense-types";
 
 /** DB行からphotoUrlsを復元する */
