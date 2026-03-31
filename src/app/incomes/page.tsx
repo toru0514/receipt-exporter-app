@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Header from "@/components/Header";
+
 import IncomeTable from "@/components/income/IncomeTable";
 import IncomeSummary from "@/components/income/IncomeSummary";
 import AddIncomeModal from "@/components/income/AddIncomeModal";
@@ -81,8 +81,7 @@ export default function IncomesPage() {
   const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Header />
+    <>
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         <div className="flex items-center justify-between">
@@ -183,6 +182,6 @@ export default function IncomesPage() {
         onSubmit={handleAdd}
         clients={clients}
       />
-    </div>
+    </>
   );
 }

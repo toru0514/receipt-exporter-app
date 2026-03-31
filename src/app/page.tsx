@@ -2,7 +2,7 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useState, useCallback, useMemo } from "react";
-import Header from "@/components/Header";
+
 import EmailList from "@/components/EmailList";
 import SortableTable from "@/components/SortableTable";
 import ProgressBar from "@/components/ProgressBar";
@@ -253,7 +253,7 @@ export default function Home() {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center dark:bg-gray-950">
+      <div className="flex min-h-screen items-center justify-center">
         <p className="text-gray-500 dark:text-gray-400">読み込み中...</p>
       </div>
     );
@@ -261,7 +261,7 @@ export default function Home() {
 
   if (!session) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4 dark:bg-gray-950">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             EC経費管理
@@ -301,8 +301,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Header />
+    <>
       <main className="mx-auto max-w-5xl px-4 py-4 sm:py-6">
         {/* Provider Tab */}
         <div className="mb-4 flex border-b border-gray-200 dark:border-gray-700">
@@ -506,6 +505,6 @@ export default function Home() {
           <ExportHistory />
         </section>
       </main>
-    </div>
+    </>
   );
 }
