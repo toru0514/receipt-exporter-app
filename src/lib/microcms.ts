@@ -260,3 +260,4 @@ export async function deleteReceipt(id: string): Promise<void> {
     contentId: id,
   });
 }
+

@@ -37,6 +37,16 @@ export default function Header() {
             >
               領収書
             </Link>
+            <Link
+              href="/incomes"
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                pathname === "/incomes"
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              }`}
+            >
+              入金管理
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">

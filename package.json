@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.101.0",
     "googleapis": "^171.4.0",
     "jszip": "^3.10.1",
     "microcms-js-sdk": "^3.3.0",
