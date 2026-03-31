@@ -1,0 +1,293 @@
+"use client";
+
+import { useState } from "react";
+import type { ExpenseCreateInput } from "@/lib/expense-types";
+import ClientCombobox from "@/components/income/ClientCombobox";
+import MicroCMSMediaPicker from "@/components/receipt/MicroCMSMediaPicker";
+
+interface AddExpenseModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (input: ExpenseCreateInput) => Promise<void>;
+  payees: string[];
+}
+
+function todayString() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export default function AddExpenseModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  payees,
+}: AddExpenseModalProps) {
+  const [date, setDate] = useState(todayString());
+  const [payeeName, setPayeeName] = useState("");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+  const [photoUrls, setPhotoUrls] = useState<string[]>([""]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+
+  if (!isOpen) return null;
+
+  const updatePhotoUrl = (index: number, value: string) => {
+    setPhotoUrls((prev) => prev.map((u, i) => (i === index ? value : u)));
+  };
+
+  const addPhotoUrl = () => {
+    setPhotoUrls((prev) => [...prev, ""]);
+  };
+
+  const removePhotoUrl = (index: number) => {
+    setPhotoUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!date || !payeeName.trim() || !amount) {
+      setError("日付、支払先、金額は必須です");
+      return;
+    }
+
+    const parsedAmount = Number(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("金額は正の数値を入力してください");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        date,
+        payeeName: payeeName.trim(),
+        description: description.trim(),
+        amount: parsedAmount,
+        notes: notes.trim(),
+        photoUrls: photoUrls.map((u) => u.trim()).filter((u) => u !== ""),
+      });
+      // Reset form
+      setDate(todayString());
+      setPayeeName("");
+      setDescription("");
+      setAmount("");
+      setNotes("");
+      setPhotoUrls([""]);
+      onClose();
+    } catch {
+      setError("登録に失敗しました");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            出金を追加
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              日付 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              支払先 <span className="text-red-500">*</span>
+            </label>
+            <ClientCombobox
+              value={payeeName}
+              onChange={setPayeeName}
+              clients={payees}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              内容
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="例: 材料費"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              金額 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0"
+              min="1"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              備考
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="メモなど"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              写真
+            </label>
+
+            {/* 選択済みサムネイル */}
+            {photoUrls.filter((u) => u.trim() !== "").length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {photoUrls.map((url, index) =>
+                  url.trim() ? (
+                    <div key={index} className="group relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+                      <img src={url} alt={`写真${index + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePhotoUrl(index)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                        title="削除"
+                      >
+                        <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            )}
+
+            {/* URL入力欄 */}
+            <div className="space-y-2">
+              {photoUrls.map((url, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => updatePhotoUrl(index, e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+                  />
+                  {photoUrls.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePhotoUrl(index)}
+                      className="shrink-0 rounded-lg p-2 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                      title="削除"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={addPhotoUrl}
+                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  URLを追加
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMediaPicker(true)}
+                  className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  microCMSから選択
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50 dark:bg-orange-500 dark:hover:bg-orange-600"
+            >
+              {submitting ? "登録中..." : "登録"}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {showMediaPicker && (
+        <MicroCMSMediaPicker
+          multiple
+          rawUrl
+          onSelect={(url) => {
+            setPhotoUrls((prev) => {
+              // 空の入力欄があればそこに入れる、なければ追加
+              const emptyIndex = prev.findIndex((u) => u.trim() === "");
+              if (emptyIndex >= 0) {
+                return prev.map((u, i) => (i === emptyIndex ? url : u));
+              }
+              return [...prev, url];
+            });
+          }}
+          onClose={() => setShowMediaPicker(false)}
+        />
+      )}
+    </div>
+  );
+}

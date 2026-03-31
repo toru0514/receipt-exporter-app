@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Header from "@/components/Header";
+
 import ReceiptCapture from "@/components/receipt/ReceiptCapture";
 import ReceiptTable from "@/components/receipt/ReceiptTable";
 import MonthlyAggregation from "@/components/receipt/MonthlyAggregation";
@@ -113,8 +113,7 @@ export default function ReceiptsPage() {
   const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Header />
+    <>
 
       <main className="mx-auto max-w-5xl px-4 py-6 space-y-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -264,6 +263,6 @@ export default function ReceiptsPage() {
           onClose={() => setSelectedReceipt(null)}
         />
       )}
-    </div>
+    </>
   );
 }

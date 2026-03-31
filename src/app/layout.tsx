@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
+import AppLayout from "@/components/AppLayout";
 
 export const metadata: Metadata = {
   title: "Amazon 経費管理",
@@ -30,7 +31,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="antialiased">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <AppLayout>{children}</AppLayout>
+        </SessionProvider>
       </body>
     </html>
   );

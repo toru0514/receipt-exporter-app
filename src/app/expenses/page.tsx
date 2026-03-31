@@ -2,81 +2,81 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-import IncomeTable from "@/components/income/IncomeTable";
-import IncomeSummary from "@/components/income/IncomeSummary";
-import AddIncomeModal from "@/components/income/AddIncomeModal";
-import type { Income, IncomeCreateInput } from "@/lib/income-types";
+import ExpenseTable from "@/components/expense/ExpenseTable";
+import ExpenseSummary from "@/components/expense/ExpenseSummary";
+import AddExpenseModal from "@/components/expense/AddExpenseModal";
+import type { Expense, ExpenseCreateInput } from "@/lib/expense-types";
 
-export default function IncomesPage() {
+export default function ExpensesPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [incomes, setIncomes] = useState<Income[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [clients, setClients] = useState<string[]>([]);
+  const [payees, setPayees] = useState<string[]>([]);
 
-  const fetchIncomes = useCallback(async () => {
+  const fetchExpenses = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         year: String(year),
         month: String(month),
       });
-      const res = await fetch(`/api/incomes?${params}`);
+      const res = await fetch(`/api/expenses?${params}`);
       if (!res.ok) throw new Error("取得失敗");
       const data = await res.json();
-      setIncomes(data.incomes);
+      setExpenses(data.expenses);
       setTotalCount(data.totalCount);
     } catch (err) {
-      console.error("入金取得エラー:", err);
+      console.error("出金取得エラー:", err);
     } finally {
       setLoading(false);
     }
   }, [year, month]);
 
-  const fetchClients = useCallback(async () => {
+  const fetchPayees = useCallback(async () => {
     try {
-      const res = await fetch("/api/incomes/clients");
+      const res = await fetch("/api/expenses/payees");
       if (!res.ok) return;
       const data = await res.json();
-      setClients(data.clients);
+      setPayees(data.payees);
     } catch {
       // ignore
     }
   }, []);
 
   useEffect(() => {
-    fetchIncomes();
-  }, [fetchIncomes]);
+    fetchExpenses();
+  }, [fetchExpenses]);
 
   useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
+    fetchPayees();
+  }, [fetchPayees]);
 
-  const handleAdd = async (input: IncomeCreateInput) => {
-    const res = await fetch("/api/incomes", {
+  const handleAdd = async (input: ExpenseCreateInput) => {
+    const res = await fetch("/api/expenses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("登録失敗");
-    await fetchIncomes();
-    await fetchClients();
+    await fetchExpenses();
+    await fetchPayees();
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/incomes?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/expenses?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("削除失敗");
-      await fetchIncomes();
+      await fetchExpenses();
     } catch {
       alert("削除に失敗しました");
     }
   };
 
-  const totalAmount = incomes.reduce((sum, i) => sum + i.amount, 0);
+  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
   const yearMonthLabel = `${year}年${month}月`;
   const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
@@ -86,7 +86,7 @@ export default function IncomesPage() {
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            入金管理
+            出金管理
           </h2>
         </div>
 
@@ -119,7 +119,7 @@ export default function IncomesPage() {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+            className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600"
           >
             <svg
               className="h-4 w-4"
@@ -139,13 +139,13 @@ export default function IncomesPage() {
         </section>
 
         {/* 集計 */}
-        <IncomeSummary
+        <ExpenseSummary
           totalAmount={totalAmount}
           count={totalCount}
           yearMonth={yearMonthLabel}
         />
 
-        {/* 入金一覧 */}
+        {/* 出金一覧 */}
         <section className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -170,17 +170,17 @@ export default function IncomesPage() {
               </svg>
             </div>
           ) : (
-            <IncomeTable incomes={incomes} onDelete={handleDelete} />
+            <ExpenseTable expenses={expenses} onDelete={handleDelete} />
           )}
         </section>
       </main>
 
       {/* 追加モーダル */}
-      <AddIncomeModal
+      <AddExpenseModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAdd}
-        clients={clients}
+        payees={payees}
       />
     </>
   );
