@@ -11,7 +11,7 @@ interface MicroCMSMediaPickerProps {
   onSelect: (imageUrl: string) => void;
   onClose: () => void;
   multiple?: boolean;
-  /** trueの場合、dataURLに変換せずそのままのURLを返す */
+  /** trueの場合、DataURL変換せず元のURLをそのまま返す */
   rawUrl?: boolean;
 }
 
@@ -91,6 +91,7 @@ export default function MicroCMSMediaPicker({
       onClose();
       return;
     }
+
 
     try {
       const res = await fetch(url);
