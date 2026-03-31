@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ExpenseCreateInput } from "@/lib/expense-types";
 import ClientCombobox from "@/components/income/ClientCombobox";
+import MicroCMSMediaPicker from "@/components/receipt/MicroCMSMediaPicker";
 
 interface AddExpenseModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export default function AddExpenseModal({
   const [photoUrls, setPhotoUrls] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   if (!isOpen) return null;
 
@@ -87,7 +89,7 @@ export default function AddExpenseModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+      <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             出金を追加
@@ -174,8 +176,33 @@ export default function AddExpenseModal({
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              写真URL
+              写真
             </label>
+
+            {/* 選択済みサムネイル */}
+            {photoUrls.filter((u) => u.trim() !== "").length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {photoUrls.map((url, index) =>
+                  url.trim() ? (
+                    <div key={index} className="group relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+                      <img src={url} alt={`写真${index + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePhotoUrl(index)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                        title="削除"
+                      >
+                        <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            )}
+
+            {/* URL入力欄 */}
             <div className="space-y-2">
               {photoUrls.map((url, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -200,16 +227,28 @@ export default function AddExpenseModal({
                   )}
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={addPhotoUrl}
-                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                写真URLを追加
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={addPhotoUrl}
+                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  URLを追加
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMediaPicker(true)}
+                  className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  microCMSから選択
+                </button>
+              </div>
             </div>
           </div>
 
@@ -231,6 +270,24 @@ export default function AddExpenseModal({
           </div>
         </form>
       </div>
+
+      {showMediaPicker && (
+        <MicroCMSMediaPicker
+          multiple
+          rawUrl
+          onSelect={(url) => {
+            setPhotoUrls((prev) => {
+              // 空の入力欄があればそこに入れる、なければ追加
+              const emptyIndex = prev.findIndex((u) => u.trim() === "");
+              if (emptyIndex >= 0) {
+                return prev.map((u, i) => (i === emptyIndex ? url : u));
+              }
+              return [...prev, url];
+            });
+          }}
+          onClose={() => setShowMediaPicker(false)}
+        />
+      )}
     </div>
   );
 }
