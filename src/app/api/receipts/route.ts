@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { image } = body as { image: string };
+    const { image, imageUrl } = body as { image: string; imageUrl?: string };
 
     if (!image) {
       return NextResponse.json(
@@ -58,9 +58,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // microCMSに保存
+    // microCMSに保存（imageUrlがあれば再アップロードをスキップ）
     const receipt = await createReceipt({
       image,
+      imageUrl,
       date: analysis.date,
       storeName: analysis.storeName,
       totalAmount: analysis.totalAmount,

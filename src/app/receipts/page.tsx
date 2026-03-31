@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 import ReceiptCapture from "@/components/receipt/ReceiptCapture";
+import type { SelectedImage } from "@/components/receipt/ReceiptCapture";
 import ReceiptTable from "@/components/receipt/ReceiptTable";
 import MonthlyAggregation from "@/components/receipt/MonthlyAggregation";
 import ReceiptDetail from "@/components/receipt/ReceiptDetail";
@@ -60,26 +61,34 @@ export default function ReceiptsPage() {
     fetchReceipts();
   }, [fetchReceipts]);
 
-  const handleAnalyze = async (images: string[]) => {
+  const handleAnalyze = async (images: SelectedImage[]) => {
     setUploading(true);
     setUploadProgress({ current: 0, total: images.length });
     let successCount = 0;
     let errorCount = 0;
+    const resultDates: string[] = [];
 
     for (let i = 0; i < images.length; i++) {
       setUploadProgress({ current: i + 1, total: images.length });
       try {
-        const compressed = await compressImage(images[i]);
+        const compressed = await compressImage(images[i].dataUrl);
         const res = await fetch("/api/receipts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: compressed }),
+          body: JSON.stringify({
+            image: compressed,
+            imageUrl: images[i].microCmsUrl,
+          }),
         });
 
         if (!res.ok) {
           errorCount++;
         } else {
           successCount++;
+          const data = await res.json();
+          if (data.analysis?.date) {
+            resultDates.push(data.analysis.date);
+          }
         }
       } catch {
         errorCount++;
@@ -88,6 +97,16 @@ export default function ReceiptsPage() {
 
     if (errorCount > 0) {
       alert(`${successCount}件成功、${errorCount}件失敗`);
+    } else if (successCount > 0) {
+      const hasOtherMonth = resultDates.some((date) => {
+        const d = new Date(date);
+        return d.getFullYear() !== year || d.getMonth() + 1 !== month;
+      });
+      if (hasOtherMonth) {
+        alert(`${successCount}件の解析が完了しました。一部のレシートは別の月に登録されています。`);
+      } else {
+        alert(`${successCount}件の解析が完了しました。`);
+      }
     }
     await fetchReceipts();
     setUploading(false);
