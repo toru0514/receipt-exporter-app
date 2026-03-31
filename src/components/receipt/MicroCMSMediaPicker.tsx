@@ -11,12 +11,15 @@ interface MicroCMSMediaPickerProps {
   onSelect: (imageUrl: string) => void;
   onClose: () => void;
   multiple?: boolean;
+  /** trueの場合、DataURL変換せず元のURLをそのまま返す */
+  rawUrl?: boolean;
 }
 
 export default function MicroCMSMediaPicker({
   onSelect,
   onClose,
   multiple,
+  rawUrl,
 }: MicroCMSMediaPickerProps) {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,14 @@ export default function MicroCMSMediaPicker({
     const selected = media.filter((item) => selectedIds.has(item.id));
     if (selected.length === 0) return;
 
+    if (rawUrl) {
+      for (const item of selected) {
+        onSelect(item.url);
+      }
+      onClose();
+      return;
+    }
+
     setConverting(true);
     for (const item of selected) {
       try {
@@ -75,6 +86,10 @@ export default function MicroCMSMediaPicker({
   };
 
   const handleSingleSelect = async (url: string) => {
+    if (rawUrl) {
+      onSelect(url);
+      return;
+    }
     try {
       const res = await fetch(url);
       const blob = await res.blob();
