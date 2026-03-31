@@ -27,6 +27,7 @@ export interface Receipt {
 
 export interface ReceiptCreateInput {
   image?: string; // base64 data URL (optional for Amazon/Rakuten)
+  imageUrl?: string; // 既存のmicroCMS画像URL（指定時はアップロードをスキップ）
   date: string;
   storeName: string;
   totalAmount: number;

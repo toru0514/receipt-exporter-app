@@ -8,7 +8,7 @@ interface MediaItem {
 }
 
 interface MicroCMSMediaPickerProps {
-  onSelect: (imageUrl: string) => void;
+  onSelect: (imageUrl: string, originalUrl?: string) => void;
   onClose: () => void;
   multiple?: boolean;
   /** trueの場合、DataURL変換せず元のURLをそのまま返す */
@@ -72,7 +72,7 @@ export default function MicroCMSMediaPicker({
         const reader = new FileReader();
         await new Promise<void>((resolve) => {
           reader.onload = () => {
-            onSelect(reader.result as string);
+            onSelect(reader.result as string, item.url);
             resolve();
           };
           reader.readAsDataURL(blob);
@@ -98,7 +98,7 @@ export default function MicroCMSMediaPicker({
       const blob = await res.blob();
       const reader = new FileReader();
       reader.onload = () => {
-        onSelect(reader.result as string);
+        onSelect(reader.result as string, url);
       };
       reader.readAsDataURL(blob);
     } catch {

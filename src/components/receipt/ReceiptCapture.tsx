@@ -3,8 +3,13 @@
 import { useRef, useState, useCallback } from "react";
 import MicroCMSMediaPicker from "./MicroCMSMediaPicker";
 
+export interface SelectedImage {
+  dataUrl: string;
+  microCmsUrl?: string;
+}
+
 interface ReceiptCaptureProps {
-  onAnalyze: (images: string[]) => void;
+  onAnalyze: (images: SelectedImage[]) => void;
   disabled?: boolean;
 }
 
@@ -14,11 +19,11 @@ export default function ReceiptCapture({
 }: ReceiptCaptureProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 
-  const addImage = useCallback((dataUrl: string) => {
-    setSelectedImages((prev) => [...prev, dataUrl]);
+  const addImage = useCallback((image: SelectedImage) => {
+    setSelectedImages((prev) => [...prev, image]);
   }, []);
 
   const handleFile = useCallback(
@@ -36,7 +41,7 @@ export default function ReceiptCapture({
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
-        addImage(dataUrl);
+        addImage({ dataUrl });
       };
       reader.readAsDataURL(file);
     },
@@ -188,7 +193,7 @@ export default function ReceiptCapture({
             {selectedImages.map((img, index) => (
               <div key={index} className="relative aspect-square">
                 <img
-                  src={img}
+                  src={img.dataUrl}
                   alt={`選択画像 ${index + 1}`}
                   className="h-full w-full rounded-lg border border-gray-200 object-cover dark:border-gray-700"
                 />
@@ -243,8 +248,8 @@ export default function ReceiptCapture({
       {/* microCMSメディア選択モーダル */}
       {showMediaPicker && (
         <MicroCMSMediaPicker
-          onSelect={(imageDataUrl) => {
-            addImage(imageDataUrl);
+          onSelect={(imageDataUrl, originalUrl) => {
+            addImage({ dataUrl: imageDataUrl, microCmsUrl: originalUrl });
           }}
           onClose={() => setShowMediaPicker(false)}
           multiple
