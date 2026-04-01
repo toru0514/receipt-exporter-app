@@ -26,13 +26,15 @@ function toReceipt(row: any): Receipt {
   };
 }
 
-/** 領収書一覧を取得（月別・ソースフィルタ対応） */
+/** 領収書一覧を取得（月別・ソースフィルタ・検索対応） */
 export async function getReceipts(params?: {
   year?: number;
   month?: number;
   limit?: number;
   offset?: number;
   source?: ReceiptSource;
+  search?: string;
+  category?: string;
 }): Promise<{ receipts: Receipt[]; totalCount: number }> {
   const limit = params?.limit ?? 100;
   const offset = params?.offset ?? 0;
@@ -58,6 +60,14 @@ export async function getReceipts(params?: {
 
   if (params?.source) {
     query = query.eq("source", params.source);
+  }
+
+  if (params?.search) {
+    query = query.ilike("store_name", `%${params.search}%`);
+  }
+
+  if (params?.category) {
+    query = query.eq("category", params.category);
   }
 
   const { data, count, error } = await query;

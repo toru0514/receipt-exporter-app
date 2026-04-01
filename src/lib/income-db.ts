@@ -1,12 +1,13 @@
 import { getSupabase } from "./supabase/db";
 import type { Income, IncomeCreateInput, IncomeUpdateInput } from "./income-types";
 
-/** 入金一覧を取得（月別フィルタ対応） */
+/** 入金一覧を取得（月別フィルタ・検索対応） */
 export async function getIncomes(params?: {
   year?: number;
   month?: number;
   limit?: number;
   offset?: number;
+  search?: string;
 }): Promise<{ incomes: Income[]; totalCount: number }> {
   const limit = params?.limit ?? 100;
   const offset = params?.offset ?? 0;
@@ -28,6 +29,10 @@ export async function getIncomes(params?: {
     query = query
       .gte("date", `${params.year}-01-01`)
       .lt("date", `${params.year + 1}-01-01`);
+  }
+
+  if (params?.search) {
+    query = query.ilike("client_name", `%${params.search}%`);
   }
 
   const { data, count, error } = await query;

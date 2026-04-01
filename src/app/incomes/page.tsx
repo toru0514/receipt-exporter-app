@@ -21,6 +21,14 @@ export default function IncomesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Income | null>(null);
   const [clients, setClients] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // 検索テキストのデバウンス（300ms）
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchText), 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const fetchIncomes = useCallback(async () => {
     setLoading(true);
@@ -28,6 +36,9 @@ export default function IncomesPage() {
       const params = new URLSearchParams({ year: String(year) });
       if (viewMode === "month") {
         params.set("month", String(month));
+      }
+      if (debouncedSearch) {
+        params.set("search", debouncedSearch);
       }
       const res = await fetch(`/api/incomes?${params}`);
       if (!res.ok) throw new Error("取得失敗");
@@ -39,7 +50,7 @@ export default function IncomesPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month, viewMode]);
+  }, [year, month, viewMode, debouncedSearch]);
 
   const fetchClients = useCallback(async () => {
     try {
@@ -122,7 +133,7 @@ export default function IncomesPage() {
           </h2>
         </div>
 
-        {/* 年月セレクター + 追加ボタン */}
+        {/* 年月セレクター + 検索 + 追加ボタン */}
         <section className="flex flex-wrap items-center justify-between gap-4">
           <YearMonthSelector
             viewMode={viewMode}
@@ -134,6 +145,26 @@ export default function IncomesPage() {
             onMonthChange={setMonth}
           />
 
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="クライアント名で検索..."
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 placeholder:text-gray-400"
+            />
+            {searchText && (
+              <button
+                onClick={() => setSearchText("")}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                クリア
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="flex flex-wrap items-center justify-end gap-4">
           <div className="flex gap-2">
             <button
               onClick={async () => {

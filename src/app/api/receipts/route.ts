@@ -10,12 +10,16 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get("month");
     const limit = searchParams.get("limit");
     const offset = searchParams.get("offset");
+    const search = searchParams.get("search");
+    const category = searchParams.get("category");
 
     const result = await getReceipts({
       year: year ? parseInt(year) : undefined,
       month: month ? parseInt(month) : undefined,
       limit: limit ? parseInt(limit) : undefined,
       offset: offset ? parseInt(offset) : undefined,
+      search: search || undefined,
+      category: category || undefined,
     });
 
     return NextResponse.json(result);
