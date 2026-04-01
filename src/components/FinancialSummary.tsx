@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import YearMonthSelector from "@/components/common/YearMonthSelector";
 
 interface DashboardData {
   year: number;
@@ -72,54 +73,15 @@ export default function FinancialSummary() {
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
           収支サマリー
         </h2>
-        <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600">
-            <button
-              onClick={() => setViewMode("year")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-l-lg ${
-                viewMode === "year"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              年
-            </button>
-            <button
-              onClick={() => setViewMode("month")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-r-lg ${
-                viewMode === "month"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              月
-            </button>
-          </div>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}年
-              </option>
-            ))}
-          </select>
-          {viewMode === "month" && (
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>
-                  {m}月
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        <YearMonthSelector
+          viewMode={viewMode}
+          year={year}
+          month={month}
+          yearOptions={yearOptions}
+          onViewModeChange={setViewMode}
+          onYearChange={setYear}
+          onMonthChange={setMonth}
+        />
       </div>
 
       {loading ? (
