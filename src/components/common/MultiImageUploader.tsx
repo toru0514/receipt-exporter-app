@@ -18,23 +18,32 @@ export default function MultiImageUploader({
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
-  const uploadFile = useCallback(
-    async (file: File) => {
-      if (!file.type.startsWith("image/")) {
-        setError("画像ファイルを選択してください");
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        setError("ファイルサイズは10MB以下にしてください");
-        return;
-      }
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      const validFiles = files.filter((file) => {
+        if (!file.type.startsWith("image/")) {
+          setError("画像ファイルを選択してください");
+          return false;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          setError("ファイルサイズは10MB以下にしてください");
+          return false;
+        }
+        return true;
+      });
+
+      if (validFiles.length === 0) return;
 
       setError("");
       setUploading(true);
 
       try {
-        const url = await uploadToMicroCMS(file);
-        onChange([...values, url]);
+        const newUrls: string[] = [];
+        for (const file of validFiles) {
+          const url = await uploadToMicroCMS(file);
+          newUrls.push(url);
+        }
+        onChange([...values, ...newUrls]);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "アップロードに失敗しました"
@@ -49,16 +58,12 @@ export default function MultiImageUploader({
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
-      if (files) {
-        // Upload files sequentially
-        Array.from(files).reduce(
-          (p, file) => p.then(() => uploadFile(file)),
-          Promise.resolve()
-        );
+      if (files && files.length > 0) {
+        uploadFiles(Array.from(files));
       }
       e.target.value = "";
     },
-    [uploadFile]
+    [uploadFiles]
   );
 
   const handleDrop = useCallback(
@@ -66,14 +71,11 @@ export default function MultiImageUploader({
       e.preventDefault();
       setDragOver(false);
       const files = e.dataTransfer.files;
-      if (files) {
-        Array.from(files).reduce(
-          (p, file) => p.then(() => uploadFile(file)),
-          Promise.resolve()
-        );
+      if (files && files.length > 0) {
+        uploadFiles(Array.from(files));
       }
     },
-    [uploadFile]
+    [uploadFiles]
   );
 
   const removeImage = (index: number) => {
