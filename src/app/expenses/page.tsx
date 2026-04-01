@@ -6,6 +6,7 @@ import ExpenseTable from "@/components/expense/ExpenseTable";
 import ExpenseSummary from "@/components/expense/ExpenseSummary";
 import AddExpenseModal from "@/components/expense/AddExpenseModal";
 import type { Expense, ExpenseCreateInput } from "@/lib/expense-types";
+import YearMonthSelector from "@/components/common/YearMonthSelector";
 
 export default function ExpensesPage() {
   const now = new Date();
@@ -93,54 +94,15 @@ export default function ExpensesPage() {
 
         {/* 年月セレクター + 追加ボタン */}
         <section className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600">
-              <button
-                onClick={() => setViewMode("year")}
-                className={`px-3 py-2 text-sm font-medium rounded-l-lg ${
-                  viewMode === "year"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                }`}
-              >
-                年
-              </button>
-              <button
-                onClick={() => setViewMode("month")}
-                className={`px-3 py-2 text-sm font-medium rounded-r-lg ${
-                  viewMode === "month"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                }`}
-              >
-                月
-              </button>
-            </div>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}年
-                </option>
-              ))}
-            </select>
-            {viewMode === "month" && (
-              <select
-                value={month}
-                onChange={(e) => setMonth(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {m}月
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          <YearMonthSelector
+            viewMode={viewMode}
+            year={year}
+            month={month}
+            yearOptions={yearOptions}
+            onViewModeChange={setViewMode}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+          />
 
           <button
             onClick={() => setShowAddModal(true)}
