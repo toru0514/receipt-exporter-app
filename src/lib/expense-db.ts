@@ -122,8 +122,7 @@ export async function updateExpense(
 ): Promise<Expense> {
   const supabase = getSupabase();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, string | number | string[]> = {};
   if (input.date !== undefined) updateData.date = input.date;
   if (input.payeeName !== undefined) updateData.payee_name = input.payeeName;
   if (input.description !== undefined) updateData.description = input.description;

@@ -1,11 +1,30 @@
 import { getSupabase } from "./supabase/db";
-import type { Receipt, ReceiptCreateInput, ReceiptSource } from "./receipt-types";
+import type { Receipt, ReceiptCreateInput, ReceiptSource, ReceiptItem } from "./receipt-types";
 import type { ParsedOrder } from "./types";
 import { getDefaultReceiptUrl } from "./receipt-url";
 
+/** Supabaseの receipts テーブル行の型 */
+interface ReceiptRow {
+  id: string;
+  image_url: string | null;
+  date: string | null;
+  store_name: string | null;
+  total_amount: number | null;
+  tax: number | null;
+  items: ReceiptItem[] | null;
+  payment_method: string | null;
+  category: string | null;
+  memo: string | null;
+  analyzed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  source: string | null;
+  order_number: string | null;
+  receipt_url: string | null;
+}
+
 /** Supabase行 → Receipt 変換 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toReceipt(row: any): Receipt {
+function toReceipt(row: ReceiptRow): Receipt {
   return {
     id: row.id,
     imageUrl: row.image_url ?? "",
@@ -157,8 +176,7 @@ export async function updateReceipt(
 ): Promise<Receipt> {
   const supabase = getSupabase();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, string | number | ReceiptItem[]> = {};
   if (input.date !== undefined) updateData.date = input.date;
   if (input.storeName !== undefined) updateData.store_name = input.storeName;
   if (input.totalAmount !== undefined) updateData.total_amount = input.totalAmount;

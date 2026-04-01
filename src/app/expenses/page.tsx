@@ -8,6 +8,9 @@ import ExpenseSummary from "@/components/expense/ExpenseSummary";
 import AddExpenseModal from "@/components/expense/AddExpenseModal";
 import type { Expense, ExpenseCreateInput } from "@/lib/expense-types";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
+import Pagination from "@/components/common/Pagination";
+
+const PER_PAGE = 20;
 
 export default function ExpensesPage() {
   const toast = useToast();
@@ -18,6 +21,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
   const [payees, setPayees] = useState<string[]>([]);
@@ -30,6 +34,11 @@ export default function ExpensesPage() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
+  // 年月切り替え時にページをリセット
+  useEffect(() => {
+    setPage(1);
+  }, [year, month, viewMode]);
+
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
     try {
@@ -40,6 +49,8 @@ export default function ExpensesPage() {
       if (debouncedSearch) {
         params.set("search", debouncedSearch);
       }
+      params.set("limit", String(PER_PAGE));
+      params.set("offset", String((page - 1) * PER_PAGE));
       const res = await fetch(`/api/expenses?${params}`);
       if (!res.ok) throw new Error("取得失敗");
       const data = await res.json();
@@ -50,7 +61,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month, viewMode, debouncedSearch]);
+  }, [year, month, viewMode, debouncedSearch, page]);
 
   const fetchPayees = useCallback(async () => {
     try {
@@ -250,6 +261,12 @@ export default function ExpensesPage() {
           ) : (
             <ExpenseTable expenses={expenses} onDelete={handleDelete} onEdit={handleEdit} />
           )}
+          <Pagination
+            currentPage={page}
+            totalCount={totalCount}
+            perPage={PER_PAGE}
+            onPageChange={setPage}
+          />
         </section>
       </main>
 
