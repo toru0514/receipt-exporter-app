@@ -103,8 +103,7 @@ export async function updateIncome(
 ): Promise<Income> {
   const supabase = getSupabase();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, string | number> = {};
   if (input.date !== undefined) updateData.date = input.date;
   if (input.clientName !== undefined) updateData.client_name = input.clientName;
   if (input.description !== undefined) updateData.description = input.description;
