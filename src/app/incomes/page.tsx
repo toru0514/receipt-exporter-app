@@ -16,7 +16,8 @@ export default function IncomesPage() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<Income | null>(null);
   const [clients, setClients] = useState<string[]>([]);
 
   const fetchIncomes = useCallback(async () => {
@@ -68,6 +69,18 @@ export default function IncomesPage() {
     await fetchClients();
   };
 
+  const handleUpdate = async (input: IncomeCreateInput) => {
+    if (!editTarget) return;
+    const res = await fetch("/api/incomes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editTarget.id, ...input }),
+    });
+    if (!res.ok) throw new Error("更新失敗");
+    await fetchIncomes();
+    await fetchClients();
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/incomes?id=${id}`, { method: "DELETE" });
@@ -76,6 +89,21 @@ export default function IncomesPage() {
     } catch {
       alert("削除に失敗しました");
     }
+  };
+
+  const handleEdit = (income: Income) => {
+    setEditTarget(income);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditTarget(null);
+  };
+
+  const handleOpenAddModal = () => {
+    setEditTarget(null);
+    setShowModal(true);
   };
 
   const totalAmount = incomes.reduce((sum, i) => sum + i.amount, 0);
@@ -134,7 +162,7 @@ export default function IncomesPage() {
               CSVダウンロード
             </button>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleOpenAddModal}
               className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
             >
               <svg
@@ -187,17 +215,18 @@ export default function IncomesPage() {
               </svg>
             </div>
           ) : (
-            <IncomeTable incomes={incomes} onDelete={handleDelete} />
+            <IncomeTable incomes={incomes} onDelete={handleDelete} onEdit={handleEdit} />
           )}
         </section>
       </main>
 
-      {/* 追加モーダル */}
+      {/* 追加/編集モーダル */}
       <AddIncomeModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={handleAdd}
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onSubmit={editTarget ? handleUpdate : handleAdd}
         clients={clients}
+        editTarget={editTarget}
       />
     </>
   );

@@ -18,3 +18,5 @@ export interface ExpenseCreateInput {
   notes: string;
   photoUrls: string[];
 }
+
+export type ExpenseUpdateInput = Partial<ExpenseCreateInput>;

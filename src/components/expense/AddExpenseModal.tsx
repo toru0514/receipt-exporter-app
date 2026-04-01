@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { ExpenseCreateInput } from "@/lib/expense-types";
+import { useState, useEffect } from "react";
+import type { Expense, ExpenseCreateInput } from "@/lib/expense-types";
 import ClientCombobox from "@/components/income/ClientCombobox";
 import MultiImageUploader from "@/components/common/MultiImageUploader";
 
@@ -10,6 +10,8 @@ interface AddExpenseModalProps {
   onClose: () => void;
   onSubmit: (input: ExpenseCreateInput) => Promise<void>;
   payees: string[];
+  /** 編集対象（指定時は編集モード） */
+  editTarget?: Expense | null;
 }
 
 function todayString() {
@@ -22,6 +24,7 @@ export default function AddExpenseModal({
   onClose,
   onSubmit,
   payees,
+  editTarget,
 }: AddExpenseModalProps) {
   const [date, setDate] = useState(todayString());
   const [payeeName, setPayeeName] = useState("");
@@ -31,6 +34,29 @@ export default function AddExpenseModal({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const isEditMode = !!editTarget;
+
+  // 編集対象が変わったらフォームを初期化
+  useEffect(() => {
+    if (editTarget) {
+      setDate(editTarget.date);
+      setPayeeName(editTarget.payeeName);
+      setDescription(editTarget.description);
+      setAmount(String(editTarget.amount));
+      setNotes(editTarget.notes);
+      setPhotoUrls(editTarget.photoUrls);
+      setError("");
+    } else if (isOpen) {
+      setDate(todayString());
+      setPayeeName("");
+      setDescription("");
+      setAmount("");
+      setNotes("");
+      setPhotoUrls([]);
+      setError("");
+    }
+  }, [editTarget, isOpen]);
 
   if (!isOpen) return null;
 
@@ -68,7 +94,7 @@ export default function AddExpenseModal({
       setPhotoUrls([]);
       onClose();
     } catch {
-      setError("登録に失敗しました");
+      setError(isEditMode ? "更新に失敗しました" : "登録に失敗しました");
     } finally {
       setSubmitting(false);
     }
@@ -79,7 +105,7 @@ export default function AddExpenseModal({
       <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            出金を追加
+            {isEditMode ? "出金を編集" : "出金を追加"}
           </h3>
           <button
             onClick={onClose}
@@ -181,7 +207,9 @@ export default function AddExpenseModal({
               disabled={submitting}
               className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50 dark:bg-orange-500 dark:hover:bg-orange-600"
             >
-              {submitting ? "登録中..." : "登録"}
+              {submitting
+                ? isEditMode ? "更新中..." : "登録中..."
+                : isEditMode ? "更新" : "登録"}
             </button>
           </div>
         </form>
