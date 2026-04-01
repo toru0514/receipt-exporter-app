@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { useToast } from "@/components/common/ToastProvider";
+import { fetcher } from "@/lib/swr";
 
 import ExpenseTable from "@/components/expense/ExpenseTable";
 import ExpenseSummary from "@/components/expense/ExpenseSummary";
@@ -15,50 +17,21 @@ export default function ExpensesPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [viewMode, setViewMode] = useState<"year" | "month">("year");
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
-  const [payees, setPayees] = useState<string[]>([]);
 
-  const fetchExpenses = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ year: String(year) });
-      if (viewMode === "month") {
-        params.set("month", String(month));
-      }
-      const res = await fetch(`/api/expenses?${params}`);
-      if (!res.ok) throw new Error("取得失敗");
-      const data = await res.json();
-      setExpenses(data.expenses);
-      setTotalCount(data.totalCount);
-    } catch (err) {
-      console.error("出金取得エラー:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month, viewMode]);
+  const expensesParams = new URLSearchParams({ year: String(year) });
+  if (viewMode === "month") {
+    expensesParams.set("month", String(month));
+  }
+  const expensesKey = `/api/expenses?${expensesParams}`;
 
-  const fetchPayees = useCallback(async () => {
-    try {
-      const res = await fetch("/api/expenses/payees");
-      if (!res.ok) return;
-      const data = await res.json();
-      setPayees(data.payees);
-    } catch {
-      // ignore
-    }
-  }, []);
+  const { data: expensesData, isLoading, mutate: mutateExpenses } = useSWR(expensesKey, fetcher);
+  const { data: payeesData, mutate: mutatePayees } = useSWR("/api/expenses/payees", fetcher);
 
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
-
-  useEffect(() => {
-    fetchPayees();
-  }, [fetchPayees]);
+  const expenses: Expense[] = expensesData?.expenses ?? [];
+  const totalCount: number = expensesData?.totalCount ?? 0;
+  const payees: string[] = payeesData?.payees ?? [];
 
   const handleAdd = async (input: ExpenseCreateInput) => {
     const res = await fetch("/api/expenses", {
@@ -67,8 +40,8 @@ export default function ExpensesPage() {
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("登録失敗");
-    await fetchExpenses();
-    await fetchPayees();
+    await mutateExpenses();
+    await mutatePayees();
   };
 
   const handleUpdate = async (input: ExpenseCreateInput) => {
@@ -79,15 +52,15 @@ export default function ExpensesPage() {
       body: JSON.stringify({ id: editTarget.id, ...input }),
     });
     if (!res.ok) throw new Error("更新失敗");
-    await fetchExpenses();
-    await fetchPayees();
+    await mutateExpenses();
+    await mutatePayees();
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/expenses?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("削除失敗");
-      await fetchExpenses();
+      await mutateExpenses();
     } catch {
       toast.error("削除に失敗しました");
     }
@@ -194,7 +167,7 @@ export default function ExpensesPage() {
 
         {/* 出金一覧 */}
         <section className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <svg
                 className="h-6 w-6 animate-spin text-gray-400"

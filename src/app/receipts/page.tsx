@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { useToast } from "@/components/common/ToastProvider";
+import { fetcher } from "@/lib/swr";
 
 import ReceiptCapture from "@/components/receipt/ReceiptCapture";
 import type { SelectedImage } from "@/components/receipt/ReceiptCapture";
@@ -35,35 +37,20 @@ export default function ReceiptsPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [viewMode, setViewMode] = useState<"year" | "month">("year");
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
 
-  const fetchReceipts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ year: String(year) });
-      if (viewMode === "month") {
-        params.set("month", String(month));
-      }
-      const res = await fetch(`/api/receipts?${params}`);
-      if (!res.ok) throw new Error("取得失敗");
-      const data = await res.json();
-      setReceipts(data.receipts);
-      setTotalCount(data.totalCount);
-    } catch (err) {
-      console.error("領収書取得エラー:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month, viewMode]);
+  const receiptsParams = new URLSearchParams({ year: String(year) });
+  if (viewMode === "month") {
+    receiptsParams.set("month", String(month));
+  }
+  const receiptsKey = `/api/receipts?${receiptsParams}`;
 
-  useEffect(() => {
-    fetchReceipts();
-  }, [fetchReceipts]);
+  const { data: receiptsData, isLoading, mutate: mutateReceipts } = useSWR(receiptsKey, fetcher);
+
+  const receipts: Receipt[] = receiptsData?.receipts ?? [];
+  const totalCount: number = receiptsData?.totalCount ?? 0;
 
   const handleAnalyze = async (images: SelectedImage[]) => {
     setUploading(true);
@@ -113,7 +100,7 @@ export default function ReceiptsPage() {
         toast.success(`${successCount}件の解析が完了しました。`);
       }
     }
-    await fetchReceipts();
+    await mutateReceipts();
     setUploading(false);
     setUploadProgress({ current: 0, total: 0 });
   };
@@ -122,7 +109,7 @@ export default function ReceiptsPage() {
     try {
       const res = await fetch(`/api/receipts?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("削除失敗");
-      await fetchReceipts();
+      await mutateReceipts();
     } catch {
       toast.error("削除に失敗しました");
     }
@@ -235,7 +222,7 @@ export default function ReceiptsPage() {
 
         {/* 領収書一覧 */}
         <section className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <svg
                 className="h-6 w-6 animate-spin text-gray-400"
@@ -274,7 +261,7 @@ export default function ReceiptsPage() {
           onClose={() => setSelectedReceipt(null)}
           onUpdated={(updated) => {
             setSelectedReceipt(updated);
-            fetchReceipts();
+            mutateReceipts();
           }}
         />
       )}

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import useSWR from "swr";
 import { useToast } from "@/components/common/ToastProvider";
+import { fetcher } from "@/lib/swr";
 
 import IncomeTable from "@/components/income/IncomeTable";
 import IncomeSummary from "@/components/income/IncomeSummary";
@@ -15,50 +17,21 @@ export default function IncomesPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [viewMode, setViewMode] = useState<"year" | "month">("year");
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Income | null>(null);
-  const [clients, setClients] = useState<string[]>([]);
 
-  const fetchIncomes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ year: String(year) });
-      if (viewMode === "month") {
-        params.set("month", String(month));
-      }
-      const res = await fetch(`/api/incomes?${params}`);
-      if (!res.ok) throw new Error("取得失敗");
-      const data = await res.json();
-      setIncomes(data.incomes);
-      setTotalCount(data.totalCount);
-    } catch (err) {
-      console.error("入金取得エラー:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month, viewMode]);
+  const incomesParams = new URLSearchParams({ year: String(year) });
+  if (viewMode === "month") {
+    incomesParams.set("month", String(month));
+  }
+  const incomesKey = `/api/incomes?${incomesParams}`;
 
-  const fetchClients = useCallback(async () => {
-    try {
-      const res = await fetch("/api/incomes/clients");
-      if (!res.ok) return;
-      const data = await res.json();
-      setClients(data.clients);
-    } catch {
-      // ignore
-    }
-  }, []);
+  const { data: incomesData, isLoading, mutate: mutateIncomes } = useSWR(incomesKey, fetcher);
+  const { data: clientsData, mutate: mutateClients } = useSWR("/api/incomes/clients", fetcher);
 
-  useEffect(() => {
-    fetchIncomes();
-  }, [fetchIncomes]);
-
-  useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
+  const incomes: Income[] = incomesData?.incomes ?? [];
+  const totalCount: number = incomesData?.totalCount ?? 0;
+  const clients: string[] = clientsData?.clients ?? [];
 
   const handleAdd = async (input: IncomeCreateInput) => {
     const res = await fetch("/api/incomes", {
@@ -67,8 +40,8 @@ export default function IncomesPage() {
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("登録失敗");
-    await fetchIncomes();
-    await fetchClients();
+    await mutateIncomes();
+    await mutateClients();
   };
 
   const handleUpdate = async (input: IncomeCreateInput) => {
@@ -79,15 +52,15 @@ export default function IncomesPage() {
       body: JSON.stringify({ id: editTarget.id, ...input }),
     });
     if (!res.ok) throw new Error("更新失敗");
-    await fetchIncomes();
-    await fetchClients();
+    await mutateIncomes();
+    await mutateClients();
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/incomes?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("削除失敗");
-      await fetchIncomes();
+      await mutateIncomes();
     } catch {
       toast.error("削除に失敗しました");
     }
@@ -194,7 +167,7 @@ export default function IncomesPage() {
 
         {/* 入金一覧 */}
         <section className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <svg
                 className="h-6 w-6 animate-spin text-gray-400"
