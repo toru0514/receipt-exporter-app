@@ -31,6 +31,7 @@ export default function ReceiptsPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [viewMode, setViewMode] = useState<"year" | "month">("year");
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -41,10 +42,10 @@ export default function ReceiptsPage() {
   const fetchReceipts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        year: String(year),
-        month: String(month),
-      });
+      const params = new URLSearchParams({ year: String(year) });
+      if (viewMode === "month") {
+        params.set("month", String(month));
+      }
       const res = await fetch(`/api/receipts?${params}`);
       if (!res.ok) throw new Error("取得失敗");
       const data = await res.json();
@@ -55,7 +56,7 @@ export default function ReceiptsPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, viewMode]);
 
   useEffect(() => {
     fetchReceipts();
@@ -98,12 +99,13 @@ export default function ReceiptsPage() {
     if (errorCount > 0) {
       alert(`${successCount}件成功、${errorCount}件失敗`);
     } else if (successCount > 0) {
-      const hasOtherMonth = resultDates.some((date) => {
+      const hasOtherPeriod = resultDates.some((date) => {
         const d = new Date(date);
+        if (viewMode === "year") return d.getFullYear() !== year;
         return d.getFullYear() !== year || d.getMonth() + 1 !== month;
       });
-      if (hasOtherMonth) {
-        alert(`${successCount}件の解析が完了しました。一部のレシートは別の月に登録されています。`);
+      if (hasOtherPeriod) {
+        alert(`${successCount}件の解析が完了しました。一部のレシートは表示期間外に登録されています。`);
       } else {
         alert(`${successCount}件の解析が完了しました。`);
       }
@@ -126,7 +128,7 @@ export default function ReceiptsPage() {
   // 集計
   const totalAmount = receipts.reduce((sum, r) => sum + r.totalAmount, 0);
   const totalTax = receipts.reduce((sum, r) => sum + r.tax, 0);
-  const yearMonthLabel = `${year}年${month}月`;
+  const yearMonthLabel = viewMode === "year" ? `${year}年` : `${year}年${month}月`;
 
   // 年の選択肢（現在年 ± 2年）
   const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
@@ -174,6 +176,28 @@ export default function ReceiptsPage() {
         {/* 年月セレクターと一括ダウンロード */}
         <section className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600">
+              <button
+                onClick={() => setViewMode("year")}
+                className={`px-3 py-2 text-sm font-medium rounded-l-lg ${
+                  viewMode === "year"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                年
+              </button>
+              <button
+                onClick={() => setViewMode("month")}
+                className={`px-3 py-2 text-sm font-medium rounded-r-lg ${
+                  viewMode === "month"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                月
+              </button>
+            </div>
             <select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
@@ -185,26 +209,28 @@ export default function ReceiptsPage() {
                 </option>
               ))}
             </select>
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>
-                  {m}月
-                </option>
-              ))}
-            </select>
+            {viewMode === "month" && (
+              <select
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {m}月
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex gap-2">
             <button
               onClick={async () => {
-                const params = new URLSearchParams({
-                  year: String(year),
-                  month: String(month),
-                });
+                const params = new URLSearchParams({ year: String(year) });
+                if (viewMode === "month") {
+                  params.set("month", String(month));
+                }
                 const res = await fetch(`/api/receipts/csv?${params}`);
                 if (!res.ok) {
                   alert("CSVダウンロードに失敗しました");
@@ -214,7 +240,9 @@ export default function ReceiptsPage() {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `receipts_${year}_${String(month).padStart(2, "0")}.csv`;
+                a.download = viewMode === "year"
+                  ? `receipts_${year}.csv`
+                  : `receipts_${year}_${String(month).padStart(2, "0")}.csv`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
