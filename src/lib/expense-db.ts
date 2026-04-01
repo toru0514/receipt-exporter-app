@@ -1,5 +1,5 @@
 import { getSupabase } from "./supabase/db";
-import type { Expense, ExpenseCreateInput } from "./expense-types";
+import type { Expense, ExpenseCreateInput, ExpenseUpdateInput } from "./expense-types";
 
 /** DB行からphotoUrlsを復元する */
 function parsePhotoUrls(row: Record<string, unknown>): string[] {
@@ -95,6 +95,44 @@ export async function createExpense(
     .single();
 
   if (error) throw new Error(`出金登録エラー: ${error.message}`);
+
+  return {
+    id: data.id,
+    date: data.date ?? "",
+    payeeName: data.payee_name ?? "",
+    description: data.description ?? "",
+    amount: data.amount ?? 0,
+    notes: data.notes ?? "",
+    photoUrls: parsePhotoUrls(data),
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+/** 出金を更新 */
+export async function updateExpense(
+  id: string,
+  input: ExpenseUpdateInput
+): Promise<Expense> {
+  const supabase = getSupabase();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, any> = {};
+  if (input.date !== undefined) updateData.date = input.date;
+  if (input.payeeName !== undefined) updateData.payee_name = input.payeeName;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.amount !== undefined) updateData.amount = input.amount;
+  if (input.notes !== undefined) updateData.notes = input.notes;
+  if (input.photoUrls !== undefined) updateData.photo_urls = input.photoUrls;
+
+  const { data, error } = await supabase
+    .from("expenses")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`出金更新エラー: ${error.message}`);
 
   return {
     id: data.id,

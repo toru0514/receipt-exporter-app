@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getExpenses, createExpense, deleteExpense } from "@/lib/expense-db";
+import { getExpenses, createExpense, updateExpense, deleteExpense } from "@/lib/expense-db";
 import type { ExpenseCreateInput } from "@/lib/expense-types";
 
 /** GET: 出金一覧取得（月別フィルタ対応） */
@@ -50,6 +50,35 @@ export async function POST(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "出金の登録に失敗しました",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/** PATCH: 出金を更新 */
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, ...fields } = body as { id: string; [key: string]: unknown };
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "IDが必要です" },
+        { status: 400 }
+      );
+    }
+
+    const expense = await updateExpense(id, fields);
+    return NextResponse.json({ expense });
+  } catch (error) {
+    console.error("出金更新エラー:", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "出金の更新に失敗しました",
       },
       { status: 500 }
     );

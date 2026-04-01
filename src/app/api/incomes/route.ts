@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIncomes, createIncome, deleteIncome } from "@/lib/income-db";
+import { getIncomes, createIncome, updateIncome, deleteIncome } from "@/lib/income-db";
 import type { IncomeCreateInput } from "@/lib/income-types";
 
 /** GET: 入金一覧取得（月別フィルタ対応） */
@@ -50,6 +50,35 @@ export async function POST(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "入金の登録に失敗しました",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/** PATCH: 入金を更新 */
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, ...fields } = body as { id: string; [key: string]: unknown };
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "IDが必要です" },
+        { status: 400 }
+      );
+    }
+
+    const income = await updateIncome(id, fields);
+    return NextResponse.json({ income });
+  } catch (error) {
+    console.error("入金更新エラー:", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "入金の更新に失敗しました",
       },
       { status: 500 }
     );
