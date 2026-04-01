@@ -6,14 +6,22 @@ import { getSupabase } from "@/lib/supabase/db";
 /** 出金合計を取得（テーブルが存在しない場合は0） */
 async function getExpensesTotal(params: {
   year: number;
-  month: number;
+  month?: number;
 }): Promise<{ total: number; count: number }> {
   try {
     const supabase = getSupabase();
-    const startDate = `${params.year}-${String(params.month).padStart(2, "0")}-01`;
-    const endMonth = params.month === 12 ? 1 : params.month + 1;
-    const endYear = params.month === 12 ? params.year + 1 : params.year;
-    const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+    let startDate: string;
+    let endDate: string;
+
+    if (params.month) {
+      startDate = `${params.year}-${String(params.month).padStart(2, "0")}-01`;
+      const endMonth = params.month === 12 ? 1 : params.month + 1;
+      const endYear = params.month === 12 ? params.year + 1 : params.year;
+      endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+    } else {
+      startDate = `${params.year}-01-01`;
+      endDate = `${params.year + 1}-01-01`;
+    }
 
     const { data, count, error } = await supabase
       .from("expenses")
@@ -33,27 +41,27 @@ async function getExpensesTotal(params: {
   }
 }
 
-/** GET: 月別の収支サマリーを返す */
+/** GET: 年別または月別の収支サマリーを返す */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const now = new Date();
     const year = parseInt(searchParams.get("year") ?? String(now.getFullYear()));
-    const month = parseInt(
-      searchParams.get("month") ?? String(now.getMonth() + 1)
-    );
+    const monthParam = searchParams.get("month");
+    const month = monthParam ? parseInt(monthParam) : undefined;
 
     // 並行で取得
+    const queryParams = month ? { year, month } : { year };
     const [receiptsResult, incomesResult, expensesResult] = await Promise.all([
-      getReceipts({ year, month }).catch(() => ({
+      getReceipts(queryParams).catch(() => ({
         receipts: [],
         totalCount: 0,
       })),
-      getIncomes({ year, month }).catch(() => ({
+      getIncomes(queryParams).catch(() => ({
         incomes: [],
         totalCount: 0,
       })),
-      getExpensesTotal({ year, month }),
+      getExpensesTotal(queryParams),
     ]);
 
     const receiptTotal = receiptsResult.receipts.reduce(
@@ -73,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       year,
-      month,
+      ...(month ? { month } : {}),
       income: {
         total: incomeTotal,
         count: incomesResult.totalCount,

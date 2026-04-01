@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 
 interface DashboardData {
   year: number;
-  month: number;
+  month?: number;
   income: { total: number; count: number };
   expense: {
     receipt: { total: number; count: number };
@@ -18,6 +18,7 @@ export default function FinancialSummary() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [viewMode, setViewMode] = useState<"year" | "month">("year");
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,10 +30,10 @@ export default function FinancialSummary() {
   const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        year: String(year),
-        month: String(month),
-      });
+      const params = new URLSearchParams({ year: String(year) });
+      if (viewMode === "month") {
+        params.set("month", String(month));
+      }
       const res = await fetch(`/api/dashboard/summary?${params}`);
       if (!res.ok) throw new Error("取得失敗");
       const json = await res.json();
@@ -42,7 +43,7 @@ export default function FinancialSummary() {
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, viewMode]);
 
   useEffect(() => {
     fetchSummary();
@@ -62,6 +63,9 @@ export default function FinancialSummary() {
         ? "赤字"
         : "収支ゼロ";
 
+  const periodLabel =
+    viewMode === "year" ? `${year}年` : `${year}年${month}月`;
+
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -69,6 +73,28 @@ export default function FinancialSummary() {
           収支サマリー
         </h2>
         <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600">
+            <button
+              onClick={() => setViewMode("year")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-l-lg ${
+                viewMode === "year"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              }`}
+            >
+              年
+            </button>
+            <button
+              onClick={() => setViewMode("month")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-r-lg ${
+                viewMode === "month"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              }`}
+            >
+              月
+            </button>
+          </div>
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
@@ -80,17 +106,19 @@ export default function FinancialSummary() {
               </option>
             ))}
           </select>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-          >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-              <option key={m} value={m}>
-                {m}月
-              </option>
-            ))}
-          </select>
+          {viewMode === "month" && (
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {m}月
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -121,7 +149,7 @@ export default function FinancialSummary() {
           {/* メインバランス */}
           <div className="mb-5 rounded-lg bg-gray-50 p-4 text-center dark:bg-gray-900">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              {year}年{month}月の収支
+              {periodLabel}の収支
             </p>
             <p className={`mt-1 text-3xl font-bold ${balanceColor}`}>
               {data.balance >= 0 ? "+" : ""}¥{data.balance.toLocaleString()}
