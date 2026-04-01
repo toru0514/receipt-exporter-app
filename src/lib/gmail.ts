@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import { google, gmail_v1 } from "googleapis";
 import { OrderEmail, EmailSource } from "./types";
 import { withRetry } from "./retry";
 import { GmailDateFilter, GetEmailsOptions, GetEmailsResult } from "./providers/types";
@@ -48,29 +48,27 @@ export async function runWithConcurrency<T>(
   return results;
 }
 
-export function extractBody(payload: unknown): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const p = payload as any;
-  if (!p) return "";
+export function extractBody(payload: gmail_v1.Schema$MessagePart | undefined | null): string {
+  if (!payload) return "";
 
-  if (p.mimeType === "text/html" && p.body?.data) {
-    return Buffer.from(p.body.data, "base64").toString("utf-8");
+  if (payload.mimeType === "text/html" && payload.body?.data) {
+    return Buffer.from(payload.body.data, "base64").toString("utf-8");
   }
 
-  if (p.parts) {
-    for (const part of p.parts) {
+  if (payload.parts) {
+    for (const part of payload.parts) {
       if (part.mimeType === "text/html" && part.body?.data) {
         return Buffer.from(part.body.data, "base64").toString("utf-8");
       }
     }
-    for (const part of p.parts) {
+    for (const part of payload.parts) {
       const nested = extractBody(part);
       if (nested) return nested;
     }
   }
 
-  if (p.body?.data) {
-    return Buffer.from(p.body.data, "base64").toString("utf-8");
+  if (payload.body?.data) {
+    return Buffer.from(payload.body.data, "base64").toString("utf-8");
   }
 
   return "";
