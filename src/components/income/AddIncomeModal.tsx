@@ -93,8 +93,8 @@ export default function AddIncomeModal({
       setNotes("");
       setPhotoUrl("");
       onClose();
-    } catch {
-      setError(isEditMode ? "更新に失敗しました" : "登録に失敗しました");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (isEditMode ? "更新に失敗しました" : "登録に失敗しました"));
     } finally {
       setSubmitting(false);
     }

@@ -61,7 +61,10 @@ export default function IncomesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new Error("登録失敗");
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `登録失敗 (${res.status})`);
+    }
     await mutateIncomes();
     await mutateClients();
   };
