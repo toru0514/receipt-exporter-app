@@ -1,4 +1,59 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  const serviceDomain = process.env.MICROCMS_SERVICE_DOMAIN;
+  const apiKey = process.env.MICROCMS_API_KEY;
+
+  if (!serviceDomain || !apiKey) {
+    return NextResponse.json(
+      { error: "microCMS設定が不足しています" },
+      { status: 500 }
+    );
+  }
+
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+
+    if (!file) {
+      return NextResponse.json(
+        { error: "ファイルが指定されていません" },
+        { status: 400 }
+      );
+    }
+
+    const uploadFormData = new FormData();
+    uploadFormData.append("file", file, file.name);
+
+    const response = await fetch(
+      `https://${serviceDomain}.microcms-management.io/api/v1/media`,
+      {
+        method: "POST",
+        headers: {
+          "X-MICROCMS-API-KEY": apiKey,
+        },
+        body: uploadFormData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return NextResponse.json(
+        { error: `アップロードに失敗しました: ${errorText}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json({ url: data.url });
+  } catch (error) {
+    console.error("microCMSアップロードエラー:", error);
+    return NextResponse.json(
+      { error: "アップロードに失敗しました" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function GET() {
   const serviceDomain = process.env.MICROCMS_SERVICE_DOMAIN;

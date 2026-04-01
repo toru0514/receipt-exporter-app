@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { IncomeCreateInput } from "@/lib/income-types";
 import ClientCombobox from "./ClientCombobox";
-import MicroCMSMediaPicker from "../receipt/MicroCMSMediaPicker";
+import ImageUploader from "../common/ImageUploader";
 
 interface AddIncomeModalProps {
   isOpen: boolean;
@@ -31,7 +31,6 @@ export default function AddIncomeModal({
   const [photoUrl, setPhotoUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   if (!isOpen) return null;
 
@@ -166,44 +165,8 @@ export default function AddIncomeModal({
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               写真
             </label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                placeholder="https://..."
-                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
-              />
-              <button
-                type="button"
-                onClick={() => setShowMediaPicker(true)}
-                className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              >
-                microCMS
-              </button>
-            </div>
-            {photoUrl && (
-              <div className="mt-2">
-                <img
-                  src={photoUrl}
-                  alt="プレビュー"
-                  className="h-20 w-20 rounded-lg border border-gray-200 object-cover dark:border-gray-600"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-              </div>
-            )}
+            <ImageUploader value={photoUrl} onChange={setPhotoUrl} />
           </div>
-
-          {showMediaPicker && (
-            <MicroCMSMediaPicker
-              rawUrl
-              onSelect={(url) => {
-                setPhotoUrl(url);
-                setShowMediaPicker(false);
-              }}
-              onClose={() => setShowMediaPicker(false)}
-            />
-          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
