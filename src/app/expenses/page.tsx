@@ -16,7 +16,8 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<Expense | null>(null);
   const [payees, setPayees] = useState<string[]>([]);
 
   const fetchExpenses = useCallback(async () => {
@@ -68,6 +69,18 @@ export default function ExpensesPage() {
     await fetchPayees();
   };
 
+  const handleUpdate = async (input: ExpenseCreateInput) => {
+    if (!editTarget) return;
+    const res = await fetch("/api/expenses", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editTarget.id, ...input }),
+    });
+    if (!res.ok) throw new Error("更新失敗");
+    await fetchExpenses();
+    await fetchPayees();
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/expenses?id=${id}`, { method: "DELETE" });
@@ -76,6 +89,21 @@ export default function ExpensesPage() {
     } catch {
       alert("削除に失敗しました");
     }
+  };
+
+  const handleEdit = (expense: Expense) => {
+    setEditTarget(expense);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditTarget(null);
+  };
+
+  const handleOpenAddModal = () => {
+    setEditTarget(null);
+    setShowModal(true);
   };
 
   const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -105,7 +133,7 @@ export default function ExpensesPage() {
           />
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={handleOpenAddModal}
             className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600"
           >
             <svg
@@ -157,17 +185,18 @@ export default function ExpensesPage() {
               </svg>
             </div>
           ) : (
-            <ExpenseTable expenses={expenses} onDelete={handleDelete} />
+            <ExpenseTable expenses={expenses} onDelete={handleDelete} onEdit={handleEdit} />
           )}
         </section>
       </main>
 
-      {/* 追加モーダル */}
+      {/* 追加/編集モーダル */}
       <AddExpenseModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={handleAdd}
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onSubmit={editTarget ? handleUpdate : handleAdd}
         payees={payees}
+        editTarget={editTarget}
       />
     </>
   );

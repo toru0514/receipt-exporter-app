@@ -18,3 +18,5 @@ export interface IncomeCreateInput {
   notes: string;
   photoUrl: string;
 }
+
+export type IncomeUpdateInput = Partial<IncomeCreateInput>;

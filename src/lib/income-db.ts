@@ -1,5 +1,5 @@
 import { getSupabase } from "./supabase/db";
-import type { Income, IncomeCreateInput } from "./income-types";
+import type { Income, IncomeCreateInput, IncomeUpdateInput } from "./income-types";
 
 /** 入金一覧を取得（月別フィルタ対応） */
 export async function getIncomes(params?: {
@@ -82,6 +82,44 @@ export async function createIncome(
     .single();
 
   if (error) throw new Error(`入金登録エラー: ${error.message}`);
+
+  return {
+    id: data.id,
+    date: data.date ?? "",
+    clientName: data.client_name ?? "",
+    description: data.description ?? "",
+    amount: data.amount ?? 0,
+    notes: data.notes ?? "",
+    photoUrl: data.photo_url ?? "",
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+/** 入金を更新 */
+export async function updateIncome(
+  id: string,
+  input: IncomeUpdateInput
+): Promise<Income> {
+  const supabase = getSupabase();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, any> = {};
+  if (input.date !== undefined) updateData.date = input.date;
+  if (input.clientName !== undefined) updateData.client_name = input.clientName;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.amount !== undefined) updateData.amount = input.amount;
+  if (input.notes !== undefined) updateData.notes = input.notes;
+  if (input.photoUrl !== undefined) updateData.photo_url = input.photoUrl;
+
+  const { data, error } = await supabase
+    .from("incomes")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`入金更新エラー: ${error.message}`);
 
   return {
     id: data.id,
