@@ -139,6 +139,35 @@ export async function createReceiptFromOrder(
   });
 }
 
+/** 領収書を更新 */
+export async function updateReceipt(
+  id: string,
+  input: Partial<Omit<ReceiptCreateInput, "image" | "imageUrl" | "analyzedAt" | "source" | "orderNumber" | "receiptUrl">>
+): Promise<Receipt> {
+  const supabase = getSupabase();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, any> = {};
+  if (input.date !== undefined) updateData.date = input.date;
+  if (input.storeName !== undefined) updateData.store_name = input.storeName;
+  if (input.totalAmount !== undefined) updateData.total_amount = input.totalAmount;
+  if (input.tax !== undefined) updateData.tax = input.tax;
+  if (input.items !== undefined) updateData.items = input.items;
+  if (input.paymentMethod !== undefined) updateData.payment_method = input.paymentMethod;
+  if (input.category !== undefined) updateData.category = input.category;
+  if (input.memo !== undefined) updateData.memo = input.memo;
+
+  const { data, error } = await supabase
+    .from("receipts")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`領収書更新エラー: ${error.message}`);
+  return toReceipt(data);
+}
+
 /** 領収書を削除 */
 export async function deleteReceipt(id: string): Promise<void> {
   const supabase = getSupabase();

@@ -270,6 +270,10 @@ export default function ReceiptsPage() {
         <ReceiptDetail
           receipt={selectedReceipt}
           onClose={() => setSelectedReceipt(null)}
+          onUpdated={(updated) => {
+            setSelectedReceipt(updated);
+            fetchReceipts();
+          }}
         />
       )}
     </>

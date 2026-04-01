@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReceipts, createReceipt, deleteReceipt } from "@/lib/receipt-db";
+import { getReceipts, createReceipt, updateReceipt, deleteReceipt } from "@/lib/receipt-db";
 import { analyzeReceiptImage } from "@/lib/gemini-receipt";
 
 /** GET: 領収書一覧取得（月別フィルタ対応） */
@@ -83,6 +83,35 @@ export async function POST(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "領収書の登録に失敗しました",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/** PATCH: 領収書更新 */
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, ...fields } = body as { id: string; [key: string]: unknown };
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "IDが必要です" },
+        { status: 400 }
+      );
+    }
+
+    const receipt = await updateReceipt(id, fields);
+    return NextResponse.json({ receipt });
+  } catch (error) {
+    console.error("領収書更新エラー:", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "領収書の更新に失敗しました",
       },
       { status: 500 }
     );
