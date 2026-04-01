@@ -4,6 +4,7 @@ export interface Expense {
   payeeName: string; // 支払先
   description: string; // 内容
   amount: number; // 金額
+  category: string; // 会計カテゴリ
   notes: string; // 備考
   photoUrls: string[]; // 写真URL（複数）
   createdAt: string;
@@ -15,6 +16,7 @@ export interface ExpenseCreateInput {
   payeeName: string;
   description: string;
   amount: number;
+  category: string;
   notes: string;
   photoUrls: string[];
 }

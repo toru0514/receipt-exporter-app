@@ -2,6 +2,7 @@
 
 import type { Expense } from "@/lib/expense-types";
 import { useConfirm } from "@/components/common/ConfirmDialog";
+import CopyButton from "@/components/common/CopyButton";
 
 interface ExpenseTableProps {
   expenses: Expense[];
@@ -28,6 +29,7 @@ export default function ExpenseTable({ expenses, onDelete, onEdit }: ExpenseTabl
             <th className="px-4 py-3">支払先</th>
             <th className="px-4 py-3">内容</th>
             <th className="px-4 py-3 text-right">金額</th>
+            <th className="px-4 py-3">カテゴリ</th>
             <th className="px-4 py-3">備考</th>
             <th className="px-4 py-3 text-center">写真</th>
             <th className="px-4 py-3 text-center">操作</th>
@@ -40,19 +42,40 @@ export default function ExpenseTable({ expenses, onDelete, onEdit }: ExpenseTabl
               className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
             >
               <td className="whitespace-nowrap px-4 py-3 text-gray-900 dark:text-gray-100">
-                {expense.date}
+                <span className="inline-flex items-center">
+                  {expense.date}
+                  <CopyButton value={expense.date} />
+                </span>
               </td>
               <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                {expense.payeeName}
+                <span className="inline-flex items-center">
+                  {expense.payeeName}
+                  <CopyButton value={expense.payeeName} />
+                </span>
               </td>
               <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                {expense.description || "-"}
+                <span className="inline-flex items-center">
+                  {expense.description || "-"}
+                  <CopyButton value={expense.description} />
+                </span>
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-gray-100">
-                ¥{expense.amount.toLocaleString()}
+                <span className="inline-flex items-center justify-end">
+                  ¥{expense.amount.toLocaleString()}
+                  <CopyButton value={String(expense.amount)} />
+                </span>
               </td>
               <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                {expense.notes || "-"}
+                <span className="inline-flex items-center">
+                  {expense.category || "-"}
+                  <CopyButton value={expense.category} />
+                </span>
+              </td>
+              <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                <span className="inline-flex items-center">
+                  {expense.notes || "-"}
+                  <CopyButton value={expense.notes} />
+                </span>
               </td>
               <td className="px-4 py-3 text-center">
                 {expense.photoUrls.length > 0 ? (

@@ -2,6 +2,7 @@
 
 import type { Income } from "@/lib/income-types";
 import { useConfirm } from "@/components/common/ConfirmDialog";
+import CopyButton from "@/components/common/CopyButton";
 
 interface IncomeTableProps {
   incomes: Income[];
@@ -40,19 +41,34 @@ export default function IncomeTable({ incomes, onDelete, onEdit }: IncomeTablePr
               className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
             >
               <td className="whitespace-nowrap px-4 py-3 text-gray-900 dark:text-gray-100">
-                {income.date}
+                <span className="inline-flex items-center">
+                  {income.date}
+                  <CopyButton value={income.date} />
+                </span>
               </td>
               <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                {income.clientName}
+                <span className="inline-flex items-center">
+                  {income.clientName}
+                  <CopyButton value={income.clientName} />
+                </span>
               </td>
               <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                {income.description || "-"}
+                <span className="inline-flex items-center">
+                  {income.description || "-"}
+                  <CopyButton value={income.description} />
+                </span>
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-gray-100">
-                ¥{income.amount.toLocaleString()}
+                <span className="inline-flex items-center justify-end">
+                  ¥{income.amount.toLocaleString()}
+                  <CopyButton value={String(income.amount)} />
+                </span>
               </td>
               <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                {income.notes || "-"}
+                <span className="inline-flex items-center">
+                  {income.notes || "-"}
+                  <CopyButton value={income.notes} />
+                </span>
               </td>
               <td className="px-4 py-3 text-center">
                 {income.photoUrls.length > 0 ? (

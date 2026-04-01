@@ -58,6 +58,7 @@ export async function getExpenses(params?: {
     payeeName: row.payee_name ?? "",
     description: row.description ?? "",
     amount: row.amount ?? 0,
+    category: row.category ?? "",
     notes: row.notes ?? "",
     photoUrls: parsePhotoUrls(row),
     createdAt: row.created_at,
@@ -94,6 +95,7 @@ export async function createExpense(
       payee_name: input.payeeName,
       description: input.description,
       amount: input.amount,
+      category: input.category,
       notes: input.notes,
       photo_urls: input.photoUrls,
     })
@@ -108,6 +110,7 @@ export async function createExpense(
     payeeName: data.payee_name ?? "",
     description: data.description ?? "",
     amount: data.amount ?? 0,
+    category: data.category ?? "",
     notes: data.notes ?? "",
     photoUrls: parsePhotoUrls(data),
     createdAt: data.created_at,
@@ -127,6 +130,7 @@ export async function updateExpense(
   if (input.payeeName !== undefined) updateData.payee_name = input.payeeName;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.amount !== undefined) updateData.amount = input.amount;
+  if (input.category !== undefined) updateData.category = input.category;
   if (input.notes !== undefined) updateData.notes = input.notes;
   if (input.photoUrls !== undefined) updateData.photo_urls = input.photoUrls;
 
@@ -145,6 +149,7 @@ export async function updateExpense(
     payeeName: data.payee_name ?? "",
     description: data.description ?? "",
     amount: data.amount ?? 0,
+    category: data.category ?? "",
     notes: data.notes ?? "",
     photoUrls: parsePhotoUrls(data),
     createdAt: data.created_at,

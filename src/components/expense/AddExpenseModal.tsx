@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Expense, ExpenseCreateInput } from "@/lib/expense-types";
+import { RECEIPT_CATEGORIES } from "@/lib/receipt-types";
 import ClientCombobox from "@/components/income/ClientCombobox";
 import MultiImageUploader from "@/components/common/MultiImageUploader";
 
@@ -30,6 +31,7 @@ export default function AddExpenseModal({
   const [payeeName, setPayeeName] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +46,7 @@ export default function AddExpenseModal({
       setPayeeName(editTarget.payeeName);
       setDescription(editTarget.description);
       setAmount(String(editTarget.amount));
+      setCategory(editTarget.category);
       setNotes(editTarget.notes);
       setPhotoUrls(editTarget.photoUrls);
       setError("");
@@ -52,6 +55,7 @@ export default function AddExpenseModal({
       setPayeeName("");
       setDescription("");
       setAmount("");
+      setCategory("");
       setNotes("");
       setPhotoUrls([]);
       setError("");
@@ -82,6 +86,7 @@ export default function AddExpenseModal({
         payeeName: payeeName.trim(),
         description: description.trim(),
         amount: parsedAmount,
+        category,
         notes: notes.trim(),
         photoUrls: photoUrls.filter((u) => u !== ""),
       });
@@ -90,6 +95,7 @@ export default function AddExpenseModal({
       setPayeeName("");
       setDescription("");
       setAmount("");
+      setCategory("");
       setNotes("");
       setPhotoUrls([]);
       onClose();
@@ -172,6 +178,24 @@ export default function AddExpenseModal({
               min="1"
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              カテゴリ
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400"
+            >
+              <option value="">選択してください</option>
+              {RECEIPT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
