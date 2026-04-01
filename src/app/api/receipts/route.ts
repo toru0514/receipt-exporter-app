@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReceipts, createReceipt, deleteReceipt } from "@/lib/microcms";
+import { getReceipts, createReceipt, deleteReceipt } from "@/lib/receipt-db";
 import { analyzeReceiptImage } from "@/lib/gemini-receipt";
 
 /** GET: 領収書一覧取得（月別フィルタ対応） */
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** POST: 画像をアップロード → Gemini解析 → microCMSに保存 */
+/** POST: 画像をアップロード → Gemini解析 → Supabaseに保存 */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // microCMSに保存（imageUrlがあれば再アップロードをスキップ）
+    // Supabaseに保存
     const receipt = await createReceipt({
       image,
       imageUrl,

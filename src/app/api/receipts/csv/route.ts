@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReceipts } from "@/lib/microcms";
+import { getReceipts } from "@/lib/receipt-db";
 import type { Receipt, ReceiptSource } from "@/lib/receipt-types";
 
 function escapeCsvCell(value: string): string {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import JSZip from "jszip";
-import { getReceipts } from "@/lib/microcms";
+import { getReceipts } from "@/lib/receipt-db";
 
 /** GET: 月別/年別の画像一括ダウンロード（ZIP） */
 export async function GET(request: NextRequest) {
