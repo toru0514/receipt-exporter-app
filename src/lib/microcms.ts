@@ -163,9 +163,11 @@ export async function createReceipt(
 ): Promise<Receipt> {
   const client = getClient();
 
-  // 画像がある場合のみアップロード
+  // 既存のmicroCMS URLがあればそのまま使用、なければアップロード
   let imageUrl = "";
-  if (input.image) {
+  if (input.imageUrl) {
+    imageUrl = input.imageUrl;
+  } else if (input.image) {
     imageUrl = await uploadImage(input.image);
   }
 
