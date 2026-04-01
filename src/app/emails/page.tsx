@@ -79,7 +79,7 @@ export default function EmailsPage() {
       setLoading(null);
       setLoadingPhase(null);
     }
-  }, [dateAfter, dateBefore, region, provider]);
+  }, [dateAfter, dateBefore, region, provider, toast]);
 
   const analyzeEmails = useCallback(async () => {
     const selected = emails.filter((e) => selectedIds.has(e.id));
@@ -126,7 +126,7 @@ export default function EmailsPage() {
     }
     setLoading(null);
     setLoadingPhase(null);
-  }, [emails, selectedIds, provider]);
+  }, [emails, selectedIds, provider, toast]);
 
   const exportToSheets = useCallback(async () => {
     const orders = results
@@ -167,7 +167,7 @@ export default function EmailsPage() {
     } finally {
       setLoading(null);
     }
-  }, [results, spreadsheetId]);
+  }, [results, spreadsheetId, toast]);
 
   const toggleEmail = (id: string) => {
     setSelectedIds((prev) => {
@@ -241,7 +241,7 @@ export default function EmailsPage() {
     } finally {
       setLoading(null);
     }
-  }, [results]);
+  }, [results, toast]);
 
   // CSV用の注文データ
   const exportableOrders = useMemo(() => {

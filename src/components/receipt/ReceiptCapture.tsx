@@ -47,7 +47,7 @@ export default function ReceiptCapture({
       };
       reader.readAsDataURL(file);
     },
-    [addImage]
+    [addImage, toast]
   );
 
   const handleInputChange = useCallback(
