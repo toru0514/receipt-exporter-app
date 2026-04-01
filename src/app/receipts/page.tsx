@@ -10,7 +10,10 @@ import MonthlyAggregation from "@/components/receipt/MonthlyAggregation";
 import ReceiptDetail from "@/components/receipt/ReceiptDetail";
 import BulkDownloadButton from "@/components/receipt/BulkDownloadButton";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
+import Pagination from "@/components/common/Pagination";
 import type { Receipt } from "@/lib/receipt-types";
+
+const PER_PAGE = 20;
 
 /** 画像をリサイズして圧縮する（Vercelの4.5MBリクエスト制限対策） */
 function compressImage(dataUrl: string, maxWidth = 1600): Promise<string> {
@@ -41,6 +44,12 @@ export default function ReceiptsPage() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+
+  // 年月切り替え時にページをリセット
+  useEffect(() => {
+    setPage(1);
+  }, [year, month, viewMode]);
 
   const fetchReceipts = useCallback(async () => {
     setLoading(true);
@@ -49,6 +58,8 @@ export default function ReceiptsPage() {
       if (viewMode === "month") {
         params.set("month", String(month));
       }
+      params.set("limit", String(PER_PAGE));
+      params.set("offset", String((page - 1) * PER_PAGE));
       const res = await fetch(`/api/receipts?${params}`);
       if (!res.ok) throw new Error("取得失敗");
       const data = await res.json();
@@ -59,7 +70,7 @@ export default function ReceiptsPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month, viewMode]);
+  }, [year, month, viewMode, page]);
 
   useEffect(() => {
     fetchReceipts();
@@ -264,6 +275,12 @@ export default function ReceiptsPage() {
               onViewDetail={setSelectedReceipt}
             />
           )}
+          <Pagination
+            currentPage={page}
+            totalCount={totalCount}
+            perPage={PER_PAGE}
+            onPageChange={setPage}
+          />
         </section>
       </main>
 

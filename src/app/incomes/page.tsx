@@ -8,6 +8,9 @@ import IncomeSummary from "@/components/income/IncomeSummary";
 import AddIncomeModal from "@/components/income/AddIncomeModal";
 import type { Income, IncomeCreateInput } from "@/lib/income-types";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
+import Pagination from "@/components/common/Pagination";
+
+const PER_PAGE = 20;
 
 export default function IncomesPage() {
   const toast = useToast();
@@ -18,9 +21,15 @@ export default function IncomesPage() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Income | null>(null);
   const [clients, setClients] = useState<string[]>([]);
+
+  // 年月切り替え時にページをリセット
+  useEffect(() => {
+    setPage(1);
+  }, [year, month, viewMode]);
 
   const fetchIncomes = useCallback(async () => {
     setLoading(true);
@@ -29,6 +38,8 @@ export default function IncomesPage() {
       if (viewMode === "month") {
         params.set("month", String(month));
       }
+      params.set("limit", String(PER_PAGE));
+      params.set("offset", String((page - 1) * PER_PAGE));
       const res = await fetch(`/api/incomes?${params}`);
       if (!res.ok) throw new Error("取得失敗");
       const data = await res.json();
@@ -39,7 +50,7 @@ export default function IncomesPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month, viewMode]);
+  }, [year, month, viewMode, page]);
 
   const fetchClients = useCallback(async () => {
     try {
@@ -219,6 +230,12 @@ export default function IncomesPage() {
           ) : (
             <IncomeTable incomes={incomes} onDelete={handleDelete} onEdit={handleEdit} />
           )}
+          <Pagination
+            currentPage={page}
+            totalCount={totalCount}
+            perPage={PER_PAGE}
+            onPageChange={setPage}
+          />
         </section>
       </main>
 
