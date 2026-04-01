@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { IncomeCreateInput } from "@/lib/income-types";
+import { useState, useEffect } from "react";
+import type { Income, IncomeCreateInput } from "@/lib/income-types";
 import ClientCombobox from "./ClientCombobox";
 import ImageUploader from "../common/ImageUploader";
 
@@ -10,6 +10,8 @@ interface AddIncomeModalProps {
   onClose: () => void;
   onSubmit: (input: IncomeCreateInput) => Promise<void>;
   clients: string[];
+  /** 編集対象（指定時は編集モード） */
+  editTarget?: Income | null;
 }
 
 function todayString() {
@@ -22,6 +24,7 @@ export default function AddIncomeModal({
   onClose,
   onSubmit,
   clients,
+  editTarget,
 }: AddIncomeModalProps) {
   const [date, setDate] = useState(todayString());
   const [clientName, setClientName] = useState("");
@@ -31,6 +34,29 @@ export default function AddIncomeModal({
   const [photoUrl, setPhotoUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const isEditMode = !!editTarget;
+
+  // 編集対象が変わったらフォームを初期化
+  useEffect(() => {
+    if (editTarget) {
+      setDate(editTarget.date);
+      setClientName(editTarget.clientName);
+      setDescription(editTarget.description);
+      setAmount(String(editTarget.amount));
+      setNotes(editTarget.notes);
+      setPhotoUrl(editTarget.photoUrl);
+      setError("");
+    } else if (isOpen) {
+      setDate(todayString());
+      setClientName("");
+      setDescription("");
+      setAmount("");
+      setNotes("");
+      setPhotoUrl("");
+      setError("");
+    }
+  }, [editTarget, isOpen]);
 
   if (!isOpen) return null;
 
@@ -68,7 +94,7 @@ export default function AddIncomeModal({
       setPhotoUrl("");
       onClose();
     } catch {
-      setError("登録に失敗しました");
+      setError(isEditMode ? "更新に失敗しました" : "登録に失敗しました");
     } finally {
       setSubmitting(false);
     }
@@ -79,7 +105,7 @@ export default function AddIncomeModal({
       <div className="mx-4 w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            入金を追加
+            {isEditMode ? "入金を編集" : "入金を追加"}
           </h3>
           <button
             onClick={onClose}
@@ -181,7 +207,9 @@ export default function AddIncomeModal({
               disabled={submitting}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 dark:bg-green-500 dark:hover:bg-green-600"
             >
-              {submitting ? "登録中..." : "登録"}
+              {submitting
+                ? isEditMode ? "更新中..." : "登録中..."
+                : isEditMode ? "更新" : "登録"}
             </button>
           </div>
         </form>
