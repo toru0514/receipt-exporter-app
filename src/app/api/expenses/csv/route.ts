@@ -19,13 +19,14 @@ function escapeCsvCell(value: string): string {
 }
 
 function expensesToCSV(expenses: Expense[]): string {
-  const headers = ["日付", "支払先", "説明", "金額", "メモ"];
+  const headers = ["日付", "支払先", "説明", "金額", "カテゴリ", "メモ"];
 
   const rows: string[][] = expenses.map((expense) => [
     expense.date,
     expense.payeeName,
     expense.description,
     String(expense.amount),
+    expense.category,
     expense.notes,
   ]);
 
