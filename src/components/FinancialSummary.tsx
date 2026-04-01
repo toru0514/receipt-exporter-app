@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
+import TimelineTable from "@/components/dashboard/TimelineTable";
 
 interface DashboardData {
   year: number;
@@ -68,6 +69,7 @@ export default function FinancialSummary() {
     viewMode === "year" ? `${year}年` : `${year}年${month}月`;
 
   return (
+  <>
     <section className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
@@ -184,5 +186,9 @@ export default function FinancialSummary() {
         </p>
       )}
     </section>
+
+      {/* 月別収支テーブル（年表示時のみ） */}
+      {viewMode === "year" && <TimelineTable year={year} />}
+    </>
   );
 }
