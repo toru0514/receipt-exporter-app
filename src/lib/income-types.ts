@@ -5,7 +5,7 @@ export interface Income {
   description: string;
   amount: number;
   notes: string;
-  photoUrl: string;
+  photoUrls: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -16,7 +16,7 @@ export interface IncomeCreateInput {
   description: string;
   amount: number;
   notes: string;
-  photoUrl: string;
+  photoUrls: string[];
 }
 
 export type IncomeUpdateInput = Partial<IncomeCreateInput>;

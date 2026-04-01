@@ -55,9 +55,9 @@ export default function IncomeTable({ incomes, onDelete, onEdit }: IncomeTablePr
                 {income.notes || "-"}
               </td>
               <td className="px-4 py-3 text-center">
-                {income.photoUrl ? (
+                {income.photoUrls.length > 0 ? (
                   <a
-                    href={income.photoUrl}
+                    href={income.photoUrls[0]}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"

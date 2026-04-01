@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Income, IncomeCreateInput } from "@/lib/income-types";
 import ClientCombobox from "./ClientCombobox";
-import ImageUploader from "../common/ImageUploader";
+import MultiImageUploader from "../common/MultiImageUploader";
 
 interface AddIncomeModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export default function AddIncomeModal({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -45,7 +45,7 @@ export default function AddIncomeModal({
       setDescription(editTarget.description);
       setAmount(String(editTarget.amount));
       setNotes(editTarget.notes);
-      setPhotoUrl(editTarget.photoUrl);
+      setPhotoUrls(editTarget.photoUrls);
       setError("");
     } else if (isOpen) {
       setDate(todayString());
@@ -53,7 +53,7 @@ export default function AddIncomeModal({
       setDescription("");
       setAmount("");
       setNotes("");
-      setPhotoUrl("");
+      setPhotoUrls([]);
       setError("");
     }
   }, [editTarget, isOpen]);
@@ -83,7 +83,7 @@ export default function AddIncomeModal({
         description: description.trim(),
         amount: parsedAmount,
         notes: notes.trim(),
-        photoUrl: photoUrl.trim(),
+        photoUrls: photoUrls.filter((u) => u.trim() !== ""),
       });
       // Reset form
       setDate(todayString());
@@ -91,7 +91,7 @@ export default function AddIncomeModal({
       setDescription("");
       setAmount("");
       setNotes("");
-      setPhotoUrl("");
+      setPhotoUrls([]);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : (isEditMode ? "更新に失敗しました" : "登録に失敗しました"));
@@ -191,7 +191,7 @@ export default function AddIncomeModal({
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               写真
             </label>
-            <ImageUploader value={photoUrl} onChange={setPhotoUrl} />
+            <MultiImageUploader values={photoUrls} onChange={setPhotoUrls} />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
