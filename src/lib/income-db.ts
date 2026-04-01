@@ -32,7 +32,8 @@ export async function getIncomes(params?: {
   }
 
   if (params?.search) {
-    query = query.ilike("client_name", `%${params.search}%`);
+    const escaped = params.search.replace(/[%_\\]/g, "\\$&");
+    query = query.ilike("client_name", `%${escaped}%`);
   }
 
   const { data, count, error } = await query;

@@ -45,7 +45,8 @@ export async function getExpenses(params?: {
   }
 
   if (params?.search) {
-    query = query.ilike("payee_name", `%${params.search}%`);
+    const escaped = params.search.replace(/[%_\\]/g, "\\$&");
+    query = query.ilike("payee_name", `%${escaped}%`);
   }
 
   const { data, count, error } = await query;

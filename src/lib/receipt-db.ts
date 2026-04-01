@@ -63,7 +63,8 @@ export async function getReceipts(params?: {
   }
 
   if (params?.search) {
-    query = query.ilike("store_name", `%${params.search}%`);
+    const escaped = params.search.replace(/[%_\\]/g, "\\$&");
+    query = query.ilike("store_name", `%${escaped}%`);
   }
 
   if (params?.category) {
