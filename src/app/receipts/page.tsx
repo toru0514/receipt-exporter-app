@@ -12,6 +12,7 @@ import BulkDownloadButton from "@/components/receipt/BulkDownloadButton";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
 import Pagination from "@/components/common/Pagination";
 import type { Receipt } from "@/lib/receipt-types";
+import { RECEIPT_CATEGORIES } from "@/lib/receipt-types";
 
 const PER_PAGE = 20;
 
@@ -45,6 +46,15 @@ export default function ReceiptsPage() {
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+
+  // 検索テキストのデバウンス（300ms）
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchText), 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   // 年月切り替え時にページをリセット
   useEffect(() => {
@@ -58,6 +68,12 @@ export default function ReceiptsPage() {
       if (viewMode === "month") {
         params.set("month", String(month));
       }
+      if (debouncedSearch) {
+        params.set("search", debouncedSearch);
+      }
+      if (categoryFilter) {
+        params.set("category", categoryFilter);
+      }
       params.set("limit", String(PER_PAGE));
       params.set("offset", String((page - 1) * PER_PAGE));
       const res = await fetch(`/api/receipts?${params}`);
@@ -70,7 +86,7 @@ export default function ReceiptsPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month, viewMode, page]);
+  }, [year, month, viewMode, debouncedSearch, categoryFilter, page]);
 
   useEffect(() => {
     fetchReceipts();
@@ -199,6 +215,41 @@ export default function ReceiptsPage() {
             onMonthChange={setMonth}
           />
 
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="店舗名で検索..."
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 placeholder:text-gray-400"
+            />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">全カテゴリ</option>
+              {RECEIPT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            {(searchText || categoryFilter) && (
+              <button
+                onClick={() => {
+                  setSearchText("");
+                  setCategoryFilter("");
+                }}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                クリア
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="flex flex-wrap items-center justify-end gap-4">
           <div className="flex gap-2">
             <button
               onClick={async () => {

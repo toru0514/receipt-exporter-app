@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
     const monthParam = searchParams.get("month");
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
+    const search = searchParams.get("search");
+    const category = searchParams.get("category");
 
     const ymResult = validateYearMonth(yearParam, monthParam);
     if (!ymResult.valid) {
@@ -27,6 +29,8 @@ export async function GET(request: NextRequest) {
       month: ymResult.month,
       limit: pgResult.limit,
       offset: pgResult.offset,
+      search: search || undefined,
+      category: category || undefined,
     });
 
     return NextResponse.json(result);
