@@ -60,6 +60,18 @@ export interface GeminiReceiptAnalysis {
   category: string;
 }
 
+export const PAYMENT_METHODS = [
+  "現金",
+  "クレジットカード",
+  "銀行振込",
+  "口座振替",
+  "電子マネー",
+  "QRコード決済",
+  "デビットカード",
+  "手形・小切手",
+  "その他",
+] as const;
+
 export const RECEIPT_CATEGORIES = [
   "旅費交通費",
   "通信費",
