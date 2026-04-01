@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIncomes, createIncome, updateIncome, deleteIncome } from "@/lib/income-db";
 import type { IncomeCreateInput } from "@/lib/income-types";
+import { validateYearMonth, validatePagination, validateAmount, validateDateString } from "@/lib/validation";
 
 /** GET: 入金一覧取得（月別フィルタ対応） */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const year = searchParams.get("year");
-    const month = searchParams.get("month");
-    const limit = searchParams.get("limit");
-    const offset = searchParams.get("offset");
+    const yearParam = searchParams.get("year");
+    const monthParam = searchParams.get("month");
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+
+    const ymResult = validateYearMonth(yearParam, monthParam);
+    if (!ymResult.valid) {
+      return NextResponse.json({ error: ymResult.error }, { status: 400 });
+    }
+
+    const pgResult = validatePagination(limitParam, offsetParam);
+    if (!pgResult.valid) {
+      return NextResponse.json({ error: pgResult.error }, { status: 400 });
+    }
 
     const result = await getIncomes({
-      year: year ? parseInt(year) : undefined,
-      month: month ? parseInt(month) : undefined,
-      limit: limit ? parseInt(limit) : undefined,
-      offset: offset ? parseInt(offset) : undefined,
+      year: ymResult.year,
+      month: ymResult.month,
+      limit: pgResult.limit,
+      offset: pgResult.offset,
     });
 
     return NextResponse.json(result);
@@ -38,6 +49,16 @@ export async function POST(request: NextRequest) {
         { error: "日付、客先、金額は必須です" },
         { status: 400 }
       );
+    }
+
+    const dateResult = validateDateString(body.date);
+    if (!dateResult.valid) {
+      return NextResponse.json({ error: dateResult.error }, { status: 400 });
+    }
+
+    const amountResult = validateAmount(body.amount);
+    if (!amountResult.valid) {
+      return NextResponse.json({ error: amountResult.error }, { status: 400 });
     }
 
     const income = await createIncome(body);
@@ -67,6 +88,22 @@ export async function PATCH(request: NextRequest) {
         { error: "IDが必要です" },
         { status: 400 }
       );
+    }
+
+    // 日付が含まれる場合はバリデーション
+    if (fields.date !== undefined) {
+      const dateResult = validateDateString(fields.date);
+      if (!dateResult.valid) {
+        return NextResponse.json({ error: dateResult.error }, { status: 400 });
+      }
+    }
+
+    // 金額が含まれる場合はバリデーション
+    if (fields.amount !== undefined) {
+      const amountResult = validateAmount(fields.amount);
+      if (!amountResult.valid) {
+        return NextResponse.json({ error: amountResult.error }, { status: 400 });
+      }
     }
 
     const income = await updateIncome(id, fields);

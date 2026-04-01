@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReceipts, createReceipt, updateReceipt, deleteReceipt } from "@/lib/receipt-db";
 import { analyzeReceiptImage } from "@/lib/gemini-receipt";
+import { validateYearMonth, validatePagination, validateAmount, validateDateString } from "@/lib/validation";
 
 /** GET: 領収書一覧取得（月別フィルタ対応） */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const year = searchParams.get("year");
-    const month = searchParams.get("month");
-    const limit = searchParams.get("limit");
-    const offset = searchParams.get("offset");
+    const yearParam = searchParams.get("year");
+    const monthParam = searchParams.get("month");
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+
+    const ymResult = validateYearMonth(yearParam, monthParam);
+    if (!ymResult.valid) {
+      return NextResponse.json({ error: ymResult.error }, { status: 400 });
+    }
+
+    const pgResult = validatePagination(limitParam, offsetParam);
+    if (!pgResult.valid) {
+      return NextResponse.json({ error: pgResult.error }, { status: 400 });
+    }
 
     const result = await getReceipts({
-      year: year ? parseInt(year) : undefined,
-      month: month ? parseInt(month) : undefined,
-      limit: limit ? parseInt(limit) : undefined,
-      offset: offset ? parseInt(offset) : undefined,
+      year: ymResult.year,
+      month: ymResult.month,
+      limit: pgResult.limit,
+      offset: pgResult.offset,
     });
 
     return NextResponse.json(result);
@@ -100,6 +111,22 @@ export async function PATCH(request: NextRequest) {
         { error: "IDが必要です" },
         { status: 400 }
       );
+    }
+
+    // 日付が含まれる場合はバリデーション
+    if (fields.date !== undefined) {
+      const dateResult = validateDateString(fields.date);
+      if (!dateResult.valid) {
+        return NextResponse.json({ error: dateResult.error }, { status: 400 });
+      }
+    }
+
+    // totalAmountが含まれる場合はバリデーション
+    if (fields.totalAmount !== undefined) {
+      const amountResult = validateAmount(fields.totalAmount, "totalAmount");
+      if (!amountResult.valid) {
+        return NextResponse.json({ error: amountResult.error }, { status: 400 });
+      }
     }
 
     const receipt = await updateReceipt(id, fields);
