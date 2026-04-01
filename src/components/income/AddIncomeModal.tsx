@@ -12,6 +12,8 @@ interface AddIncomeModalProps {
   clients: string[];
   /** 編集対象（指定時は編集モード） */
   editTarget?: Income | null;
+  /** 複製元（指定時は新規追加モードでフォームをプリセット） */
+  duplicateTarget?: Income | null;
 }
 
 function todayString() {
@@ -25,6 +27,7 @@ export default function AddIncomeModal({
   onSubmit,
   clients,
   editTarget,
+  duplicateTarget,
 }: AddIncomeModalProps) {
   const [date, setDate] = useState(todayString());
   const [clientName, setClientName] = useState("");
@@ -37,15 +40,16 @@ export default function AddIncomeModal({
 
   const isEditMode = !!editTarget;
 
-  // 編集対象が変わったらフォームを初期化
+  // 編集対象・複製元が変わったらフォームを初期化
   useEffect(() => {
-    if (editTarget) {
-      setDate(editTarget.date);
-      setClientName(editTarget.clientName);
-      setDescription(editTarget.description);
-      setAmount(String(editTarget.amount));
-      setNotes(editTarget.notes);
-      setPhotoUrls(editTarget.photoUrls);
+    const source = editTarget || duplicateTarget;
+    if (source) {
+      setDate(source.date);
+      setClientName(source.clientName);
+      setDescription(source.description);
+      setAmount(String(source.amount));
+      setNotes(source.notes);
+      setPhotoUrls(source.photoUrls);
       setError("");
     } else if (isOpen) {
       setDate(todayString());
@@ -56,7 +60,7 @@ export default function AddIncomeModal({
       setPhotoUrls([]);
       setError("");
     }
-  }, [editTarget, isOpen]);
+  }, [editTarget, duplicateTarget, isOpen]);
 
   if (!isOpen) return null;
 
@@ -105,7 +109,7 @@ export default function AddIncomeModal({
       <div className="mx-4 w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {isEditMode ? "入金を編集" : "入金を追加"}
+            {isEditMode ? "入金を編集" : duplicateTarget ? "入金を複製" : "入金を追加"}
           </h3>
           <button
             onClick={onClose}

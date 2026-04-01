@@ -1,58 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import type { Expense } from "@/lib/expense-types";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import CopyButton from "@/components/common/CopyButton";
-
-function formatExpenseRow(expense: Expense): string {
-  const parts = [expense.date, expense.payeeName];
-  if (expense.description) parts.push(expense.description);
-  parts.push(`¥${expense.amount.toLocaleString()}`);
-  if (expense.category) parts.push(expense.category);
-  if (expense.notes) parts.push(expense.notes);
-  return parts.join(" ");
-}
-
-function RowCopyButton({ expense }: { expense: Expense }) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(formatExpenseRow(expense));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // fallback
-    }
-  }, [expense]);
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-      title="行をコピー"
-    >
-      {copied ? (
-        <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-      ) : (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-      )}
-    </button>
-  );
-}
 
 interface ExpenseTableProps {
   expenses: Expense[];
   onDelete?: (id: string) => void;
   onEdit?: (expense: Expense) => void;
+  onDuplicate?: (expense: Expense) => void;
 }
 
-export default function ExpenseTable({ expenses, onDelete, onEdit }: ExpenseTableProps) {
+export default function ExpenseTable({ expenses, onDelete, onEdit, onDuplicate }: ExpenseTableProps) {
   const confirmDialog = useConfirm();
   if (expenses.length === 0) {
     return (
@@ -158,7 +117,17 @@ export default function ExpenseTable({ expenses, onDelete, onEdit }: ExpenseTabl
               </td>
               <td className="px-4 py-3 text-center">
                 <div className="flex items-center justify-center gap-2">
-                  <RowCopyButton expense={expense} />
+                  {onDuplicate && (
+                    <button
+                      onClick={() => onDuplicate(expense)}
+                      className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                      title="複製"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  )}
                   {onEdit && (
                     <button
                       onClick={() => onEdit(expense)}
