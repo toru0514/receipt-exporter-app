@@ -2,7 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { getReceipts } from "@/lib/receipt-db";
 import { getIncomes } from "@/lib/income-db";
 import { getExpenses } from "@/lib/expense-db";
-import type { ReceiptSource } from "@/lib/receipt-types";
+import type { Receipt, ReceiptSource } from "@/lib/receipt-types";
+import type { Income } from "@/lib/income-types";
+import type { Expense } from "@/lib/expense-types";
+
+const PAGE_SIZE = 500;
+
+/** ページネーションで全件取得する汎用ヘルパー */
+async function fetchAll<T>(
+  fetcher: (params: {
+    year: number;
+    month?: number;
+    limit: number;
+    offset: number;
+  }) => Promise<{ totalCount: number } & Record<string, unknown>>,
+  dataKey: string,
+  baseParams: { year: number; month?: number }
+): Promise<T[]> {
+  const first = await fetcher({ ...baseParams, limit: PAGE_SIZE, offset: 0 });
+  const items = (first as Record<string, unknown>)[dataKey] as T[];
+  const totalCount = first.totalCount;
+
+  if (totalCount <= PAGE_SIZE) return items;
+
+  const remaining: Promise<T[]>[] = [];
+  for (let offset = PAGE_SIZE; offset < totalCount; offset += PAGE_SIZE) {
+    remaining.push(
+      fetcher({ ...baseParams, limit: PAGE_SIZE, offset }).then(
+        (r) => (r as Record<string, unknown>)[dataKey] as T[]
+      )
+    );
+  }
+  const pages = await Promise.all(remaining);
+  return items.concat(...pages);
+}
 
 function escapeCsvCell(value: string): string {
   // CSVインジェクション対策: 先頭が危険文字の場合にシングルクォートを付与
@@ -56,22 +89,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const queryParams = {
+    const baseParams = {
       year: parseInt(year),
       month: month ? parseInt(month) : undefined,
-      limit: 500,
     };
 
-    const [receiptsResult, incomesResult, expensesResult] = await Promise.all([
-      getReceipts(queryParams).catch(() => ({ receipts: [], totalCount: 0 })),
-      getIncomes(queryParams).catch(() => ({ incomes: [], totalCount: 0 })),
-      getExpenses(queryParams).catch(() => ({ expenses: [], totalCount: 0 })),
+    const [receipts, incomes, expenses] = await Promise.all([
+      fetchAll<Receipt>(getReceipts, "receipts", baseParams).catch(() => []),
+      fetchAll<Income>(getIncomes, "incomes", baseParams).catch(() => []),
+      fetchAll<Expense>(getExpenses, "expenses", baseParams).catch(() => []),
     ]);
 
     const rows: CsvRow[] = [];
 
     // 入金データ
-    for (const income of incomesResult.incomes) {
+    for (const income of incomes) {
       rows.push({
         date: income.date,
         type: "入金",
@@ -85,7 +117,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 領収書/EC出金データ
-    for (const receipt of receiptsResult.receipts) {
+    for (const receipt of receipts) {
       const itemNames = receipt.items.map((i) => i.name).join(" / ");
       rows.push({
         date: receipt.date,
@@ -100,7 +132,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 手動出金データ
-    for (const expense of expensesResult.expenses) {
+    for (const expense of expenses) {
       rows.push({
         date: expense.date,
         type: "出金",
