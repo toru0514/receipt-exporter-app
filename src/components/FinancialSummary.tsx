@@ -4,6 +4,30 @@ import { useState, useEffect, useCallback } from "react";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
 import TimelineTable from "@/components/dashboard/TimelineTable";
 
+async function downloadFinancialCsv(year: number, month: number, viewMode: "year" | "month") {
+  const params = new URLSearchParams({ year: String(year) });
+  if (viewMode === "month") {
+    params.set("month", String(month));
+  }
+  const res = await fetch(`/api/dashboard/csv?${params}`);
+  if (!res.ok) {
+    alert("CSVダウンロードに失敗しました");
+    return;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download =
+    viewMode === "year"
+      ? `financial_summary_${year}.csv`
+      : `financial_summary_${year}_${String(month).padStart(2, "0")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 interface DashboardData {
   year: number;
   month?: number;
@@ -23,6 +47,7 @@ export default function FinancialSummary() {
   const [viewMode, setViewMode] = useState<"year" | "month">("year");
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [csvDownloading, setCsvDownloading] = useState(false);
 
   const yearOptions = Array.from(
     { length: 5 },
@@ -75,15 +100,31 @@ export default function FinancialSummary() {
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
           収支サマリー
         </h2>
-        <YearMonthSelector
-          viewMode={viewMode}
-          year={year}
-          month={month}
-          yearOptions={yearOptions}
-          onViewModeChange={setViewMode}
-          onYearChange={setYear}
-          onMonthChange={setMonth}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <YearMonthSelector
+            viewMode={viewMode}
+            year={year}
+            month={month}
+            yearOptions={yearOptions}
+            onViewModeChange={setViewMode}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+          />
+          <button
+            onClick={async () => {
+              setCsvDownloading(true);
+              try {
+                await downloadFinancialCsv(year, month, viewMode);
+              } finally {
+                setCsvDownloading(false);
+              }
+            }}
+            disabled={loading || !data || csvDownloading}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+          >
+            {csvDownloading ? "ダウンロード中..." : "CSV書き出し"}
+          </button>
+        </div>
       </div>
 
       {loading ? (
