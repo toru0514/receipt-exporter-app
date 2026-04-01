@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Receipt, ReceiptItem } from "@/lib/receipt-types";
-import { RECEIPT_CATEGORIES } from "@/lib/receipt-types";
+import { RECEIPT_CATEGORIES, PAYMENT_METHODS } from "@/lib/receipt-types";
 
 interface ReceiptDetailProps {
   receipt: Receipt;
@@ -256,12 +256,18 @@ export default function ReceiptDetail({
                 支払方法
               </span>
               {editing ? (
-                <input
-                  type="text"
+                <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className={inputClass}
-                />
+                >
+                  <option value="">未選択</option>
+                  {PAYMENT_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <p className="font-medium text-gray-900 dark:text-gray-100">
                   {receipt.paymentMethod || "-"}
