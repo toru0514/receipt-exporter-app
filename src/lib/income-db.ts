@@ -46,7 +46,7 @@ export async function getIncomes(params?: {
     description: row.description ?? "",
     amount: row.amount ?? 0,
     notes: row.notes ?? "",
-    photoUrl: row.photo_url ?? "",
+    photoUrls: Array.isArray(row.photo_urls) ? row.photo_urls.filter((u: unknown) => typeof u === "string" && u !== "") : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -82,7 +82,7 @@ export async function createIncome(
       description: input.description,
       amount: input.amount,
       notes: input.notes,
-      photo_url: input.photoUrl,
+      photo_urls: input.photoUrls,
     })
     .select()
     .single();
@@ -96,7 +96,7 @@ export async function createIncome(
     description: data.description ?? "",
     amount: data.amount ?? 0,
     notes: data.notes ?? "",
-    photoUrl: data.photo_url ?? "",
+    photoUrls: Array.isArray(data.photo_urls) ? data.photo_urls.filter((u: unknown) => typeof u === "string" && u !== "") : [],
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -109,13 +109,13 @@ export async function updateIncome(
 ): Promise<Income> {
   const supabase = getSupabase();
 
-  const updateData: Record<string, string | number> = {};
+  const updateData: Record<string, string | number | string[]> = {};
   if (input.date !== undefined) updateData.date = input.date;
   if (input.clientName !== undefined) updateData.client_name = input.clientName;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.amount !== undefined) updateData.amount = input.amount;
   if (input.notes !== undefined) updateData.notes = input.notes;
-  if (input.photoUrl !== undefined) updateData.photo_url = input.photoUrl;
+  if (input.photoUrls !== undefined) updateData.photo_urls = input.photoUrls;
 
   const { data, error } = await supabase
     .from("incomes")
@@ -133,7 +133,7 @@ export async function updateIncome(
     description: data.description ?? "",
     amount: data.amount ?? 0,
     notes: data.notes ?? "",
-    photoUrl: data.photo_url ?? "",
+    photoUrls: Array.isArray(data.photo_urls) ? data.photo_urls.filter((u: unknown) => typeof u === "string" && u !== "") : [],
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
