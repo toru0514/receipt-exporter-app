@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import AppLayout from "@/components/AppLayout";
+import ToastProvider from "@/components/common/ToastProvider";
+import ConfirmDialogProvider from "@/components/common/ConfirmDialog";
 
 export const metadata: Metadata = {
   title: "Amazon 経費管理",
@@ -32,7 +34,11 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <SessionProvider>
-          <AppLayout>{children}</AppLayout>
+          <ToastProvider>
+            <ConfirmDialogProvider>
+              <AppLayout>{children}</AppLayout>
+            </ConfirmDialogProvider>
+          </ToastProvider>
         </SessionProvider>
       </body>
     </html>

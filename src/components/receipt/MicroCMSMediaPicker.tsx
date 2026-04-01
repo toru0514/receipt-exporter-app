@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 
 interface MediaItem {
   url: string;
@@ -21,6 +22,7 @@ export default function MicroCMSMediaPicker({
   multiple,
   rawUrl,
 }: MicroCMSMediaPickerProps) {
+  const toast = useToast();
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export default function MicroCMSMediaPicker({
       };
       reader.readAsDataURL(blob);
     } catch {
-      alert("画像の読み込みに失敗しました");
+      toast.error("画像の読み込みに失敗しました");
     }
   };
 

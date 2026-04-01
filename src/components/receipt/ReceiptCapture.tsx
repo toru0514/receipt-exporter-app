@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 import MicroCMSMediaPicker from "./MicroCMSMediaPicker";
 
 export interface SelectedImage {
@@ -17,6 +18,7 @@ export default function ReceiptCapture({
   onAnalyze,
   disabled,
 }: ReceiptCaptureProps) {
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
@@ -29,12 +31,12 @@ export default function ReceiptCapture({
   const handleFile = useCallback(
     (file: File) => {
       if (!file.type.startsWith("image/")) {
-        alert("画像ファイルを選択してください");
+        toast.error("画像ファイルを選択してください");
         return;
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        alert("ファイルサイズは10MB以下にしてください");
+        toast.error("ファイルサイズは10MB以下にしてください");
         return;
       }
 

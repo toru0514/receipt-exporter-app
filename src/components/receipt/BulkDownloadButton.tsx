@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 
 interface BulkDownloadButtonProps {
   year: number;
@@ -13,6 +14,7 @@ export default function BulkDownloadButton({
   month,
   disabled,
 }: BulkDownloadButtonProps) {
+  const toast = useToast();
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async (downloadMonth?: number) => {
@@ -26,7 +28,7 @@ export default function BulkDownloadButton({
       const response = await fetch(`/api/receipts/download?${params}`);
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || "ダウンロードに失敗しました");
+        toast.error(error.error || "ダウンロードに失敗しました");
         return;
       }
 
@@ -43,7 +45,7 @@ export default function BulkDownloadButton({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      alert("ダウンロードに失敗しました");
+      toast.error("ダウンロードに失敗しました");
     } finally {
       setDownloading(false);
     }

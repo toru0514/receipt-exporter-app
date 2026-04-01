@@ -1,6 +1,7 @@
 "use client";
 
 import type { Expense } from "@/lib/expense-types";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 
 interface ExpenseTableProps {
   expenses: Expense[];
@@ -8,6 +9,7 @@ interface ExpenseTableProps {
 }
 
 export default function ExpenseTable({ expenses, onDelete }: ExpenseTableProps) {
+  const confirmDialog = useConfirm();
   if (expenses.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -91,10 +93,12 @@ export default function ExpenseTable({ expenses, onDelete }: ExpenseTableProps) 
               <td className="px-4 py-3 text-center">
                 {onDelete && (
                   <button
-                    onClick={() => {
-                      if (confirm("この出金データを削除しますか？")) {
-                        onDelete(expense.id);
-                      }
+                    onClick={async () => {
+                      const ok = await confirmDialog({
+                        title: "出金データの削除",
+                        message: "この出金データを削除しますか？",
+                      });
+                      if (ok) onDelete(expense.id);
                     }}
                     className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                     title="削除"
