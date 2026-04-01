@@ -11,6 +11,7 @@ export default function ExpensesPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [viewMode, setViewMode] = useState<"year" | "month">("year");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
@@ -20,10 +21,10 @@ export default function ExpensesPage() {
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        year: String(year),
-        month: String(month),
-      });
+      const params = new URLSearchParams({ year: String(year) });
+      if (viewMode === "month") {
+        params.set("month", String(month));
+      }
       const res = await fetch(`/api/expenses?${params}`);
       if (!res.ok) throw new Error("取得失敗");
       const data = await res.json();
@@ -34,7 +35,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, viewMode]);
 
   const fetchPayees = useCallback(async () => {
     try {
@@ -77,7 +78,7 @@ export default function ExpensesPage() {
   };
 
   const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const yearMonthLabel = `${year}年${month}月`;
+  const yearMonthLabel = viewMode === "year" ? `${year}年` : `${year}年${month}月`;
   const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   return (
@@ -93,6 +94,28 @@ export default function ExpensesPage() {
         {/* 年月セレクター + 追加ボタン */}
         <section className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600">
+              <button
+                onClick={() => setViewMode("year")}
+                className={`px-3 py-2 text-sm font-medium rounded-l-lg ${
+                  viewMode === "year"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                年
+              </button>
+              <button
+                onClick={() => setViewMode("month")}
+                className={`px-3 py-2 text-sm font-medium rounded-r-lg ${
+                  viewMode === "month"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                月
+              </button>
+            </div>
             <select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
@@ -104,17 +127,19 @@ export default function ExpensesPage() {
                 </option>
               ))}
             </select>
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>
-                  {m}月
-                </option>
-              ))}
-            </select>
+            {viewMode === "month" && (
+              <select
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {m}月
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <button
