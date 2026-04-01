@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 
 import IncomeTable from "@/components/income/IncomeTable";
 import IncomeSummary from "@/components/income/IncomeSummary";
@@ -9,6 +10,7 @@ import type { Income, IncomeCreateInput } from "@/lib/income-types";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
 
 export default function IncomesPage() {
+  const toast = useToast();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -87,7 +89,7 @@ export default function IncomesPage() {
       if (!res.ok) throw new Error("削除失敗");
       await fetchIncomes();
     } catch {
-      alert("削除に失敗しました");
+      toast.error("削除に失敗しました");
     }
   };
 

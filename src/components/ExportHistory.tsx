@@ -6,16 +6,22 @@ import {
   getExportHistory,
   clearExportHistory,
 } from "@/lib/export-history";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 
 export default function ExportHistory() {
+  const confirmDialog = useConfirm();
   const [history, setHistory] = useState<ExportHistoryEntry[]>(() => {
     if (typeof window === "undefined") return [];
     return getExportHistory();
   });
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleClear = () => {
-    if (confirm("エクスポート履歴をすべて削除しますか？")) {
+  const handleClear = async () => {
+    const ok = await confirmDialog({
+      title: "履歴の削除",
+      message: "エクスポート履歴をすべて削除しますか？",
+    });
+    if (ok) {
       clearExportHistory();
       setHistory([]);
     }

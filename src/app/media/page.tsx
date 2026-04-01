@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 
 interface MediaItem {
   id: string;
@@ -8,6 +9,7 @@ interface MediaItem {
 }
 
 export default function MediaPage() {
+  const toast = useToast();
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,7 +60,7 @@ export default function MediaPage() {
     }
 
     if (errorCount > 0) {
-      alert(`${successCount}件成功、${errorCount}件失敗`);
+      toast.error(`${successCount}件成功、${errorCount}件失敗`);
     }
     await fetchMedia();
     setUploading(false);

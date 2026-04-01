@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Receipt, ReceiptItem } from "@/lib/receipt-types";
 import { RECEIPT_CATEGORIES, PAYMENT_METHODS } from "@/lib/receipt-types";
+import { useToast } from "@/components/common/ToastProvider";
 
 interface ReceiptDetailProps {
   receipt: Receipt;
@@ -15,6 +16,7 @@ export default function ReceiptDetail({
   onClose,
   onUpdated,
 }: ReceiptDetailProps) {
+  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -52,7 +54,7 @@ export default function ReceiptDetail({
       onUpdated?.(data.receipt);
       setEditing(false);
     } catch {
-      alert("更新に失敗しました");
+      toast.error("更新に失敗しました");
     } finally {
       setSaving(false);
     }

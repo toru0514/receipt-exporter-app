@@ -1,6 +1,7 @@
 "use client";
 
 import type { Income } from "@/lib/income-types";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 
 interface IncomeTableProps {
   incomes: Income[];
@@ -9,6 +10,7 @@ interface IncomeTableProps {
 }
 
 export default function IncomeTable({ incomes, onDelete, onEdit }: IncomeTableProps) {
+  const confirmDialog = useConfirm();
   if (incomes.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -104,10 +106,12 @@ export default function IncomeTable({ incomes, onDelete, onEdit }: IncomeTablePr
                   )}
                   {onDelete && (
                     <button
-                      onClick={() => {
-                        if (confirm("この入金データを削除しますか？")) {
-                          onDelete(income.id);
-                        }
+                      onClick={async () => {
+                        const ok = await confirmDialog({
+                          title: "入金データの削除",
+                          message: "この入金データを削除しますか？",
+                        });
+                        if (ok) onDelete(income.id);
                       }}
                       className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       title="削除"

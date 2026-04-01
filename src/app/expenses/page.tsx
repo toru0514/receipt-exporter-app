@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 
 import ExpenseTable from "@/components/expense/ExpenseTable";
 import ExpenseSummary from "@/components/expense/ExpenseSummary";
@@ -9,6 +10,7 @@ import type { Expense, ExpenseCreateInput } from "@/lib/expense-types";
 import YearMonthSelector from "@/components/common/YearMonthSelector";
 
 export default function ExpensesPage() {
+  const toast = useToast();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -87,7 +89,7 @@ export default function ExpensesPage() {
       if (!res.ok) throw new Error("削除失敗");
       await fetchExpenses();
     } catch {
-      alert("削除に失敗しました");
+      toast.error("削除に失敗しました");
     }
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 
 import ReceiptCapture from "@/components/receipt/ReceiptCapture";
 import type { SelectedImage } from "@/components/receipt/ReceiptCapture";
@@ -29,6 +30,7 @@ function compressImage(dataUrl: string, maxWidth = 1600): Promise<string> {
 }
 
 export default function ReceiptsPage() {
+  const toast = useToast();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -98,7 +100,7 @@ export default function ReceiptsPage() {
     }
 
     if (errorCount > 0) {
-      alert(`${successCount}件成功、${errorCount}件失敗`);
+      toast.error(`${successCount}件成功、${errorCount}件失敗`);
     } else if (successCount > 0) {
       const hasOtherPeriod = resultDates.some((date) => {
         const d = new Date(date);
@@ -106,9 +108,9 @@ export default function ReceiptsPage() {
         return d.getFullYear() !== year || d.getMonth() + 1 !== month;
       });
       if (hasOtherPeriod) {
-        alert(`${successCount}件の解析が完了しました。一部のレシートは表示期間外に登録されています。`);
+        toast.success(`${successCount}件の解析が完了しました。一部のレシートは表示期間外に登録されています。`);
       } else {
-        alert(`${successCount}件の解析が完了しました。`);
+        toast.success(`${successCount}件の解析が完了しました。`);
       }
     }
     await fetchReceipts();
@@ -122,7 +124,7 @@ export default function ReceiptsPage() {
       if (!res.ok) throw new Error("削除失敗");
       await fetchReceipts();
     } catch {
-      alert("削除に失敗しました");
+      toast.error("削除に失敗しました");
     }
   };
 
@@ -195,7 +197,7 @@ export default function ReceiptsPage() {
                 }
                 const res = await fetch(`/api/receipts/csv?${params}`);
                 if (!res.ok) {
-                  alert("CSVダウンロードに失敗しました");
+                  toast.error("CSVダウンロードに失敗しました");
                   return;
                 }
                 const blob = await res.blob();

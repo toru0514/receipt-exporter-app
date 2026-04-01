@@ -3,6 +3,7 @@
 import { useSession, signIn } from "next-auth/react";
 import { useState, useCallback, useMemo } from "react";
 
+import { useToast } from "@/components/common/ToastProvider";
 import EmailList from "@/components/EmailList";
 import SortableTable from "@/components/SortableTable";
 import ProgressBar from "@/components/ProgressBar";
@@ -17,6 +18,7 @@ import type { AmazonRegion } from "@/lib/providers";
 import type { EmailSource } from "@/lib/types";
 
 export default function EmailsPage() {
+  const toast = useToast();
   const { data: session, status } = useSession();
   const [emails, setEmails] = useState<AmazonEmail[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -72,7 +74,7 @@ export default function EmailsPage() {
       setSelectedIds(new Set(data.emails.map((e: AmazonEmail) => e.id)));
     } catch (error) {
       console.error(error);
-      alert("メールの取得に失敗しました");
+      toast.error("メールの取得に失敗しました");
     } finally {
       setLoading(null);
       setLoadingPhase(null);
@@ -82,7 +84,7 @@ export default function EmailsPage() {
   const analyzeEmails = useCallback(async () => {
     const selected = emails.filter((e) => selectedIds.has(e.id));
     if (selected.length === 0) {
-      alert("メールを選択してください");
+      toast.info("メールを選択してください");
       return;
     }
 
@@ -131,7 +133,7 @@ export default function EmailsPage() {
       .filter((r) => r.order)
       .map((r) => r.order as ParsedOrder);
     if (orders.length === 0) {
-      alert("エクスポートするデータがありません");
+      toast.info("エクスポートするデータがありません");
       return;
     }
 
@@ -158,10 +160,10 @@ export default function EmailsPage() {
       });
       setHistoryKey((prev) => prev + 1);
 
-      alert(`${data.updatedRows}行をエクスポートしました`);
+      toast.success(`${data.updatedRows}行をエクスポートしました`);
     } catch (error) {
       console.error(error);
-      alert("エクスポートに失敗しました");
+      toast.error("エクスポートに失敗しました");
     } finally {
       setLoading(null);
     }
@@ -217,7 +219,7 @@ export default function EmailsPage() {
       .filter((r) => r.order)
       .map((r) => r.order as ParsedOrder);
     if (orders.length === 0) {
-      alert("保存するデータがありません");
+      toast.info("保存するデータがありません");
       return;
     }
 
@@ -230,12 +232,12 @@ export default function EmailsPage() {
       });
       if (!res.ok) throw new Error("保存に失敗しました");
       const data = await res.json();
-      alert(
+      toast.success(
         `保存完了: ${data.saved}件保存、${data.skipped}件スキップ（重複）${data.errors > 0 ? `、${data.errors}件エラー` : ""}`
       );
     } catch (error) {
       console.error(error);
-      alert("microCMSへの保存に失敗しました");
+      toast.error("microCMSへの保存に失敗しました");
     } finally {
       setLoading(null);
     }

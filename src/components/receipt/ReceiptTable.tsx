@@ -1,6 +1,7 @@
 "use client";
 
 import type { Receipt } from "@/lib/receipt-types";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 
 interface ReceiptTableProps {
   receipts: Receipt[];
@@ -13,6 +14,7 @@ export default function ReceiptTable({
   onDelete,
   onViewDetail,
 }: ReceiptTableProps) {
+  const confirmDialog = useConfirm();
   if (receipts.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -92,10 +94,12 @@ export default function ReceiptTable({
                   )}
                   {onDelete && (
                     <button
-                      onClick={() => {
-                        if (confirm("この領収書を削除しますか？")) {
-                          onDelete(receipt.id);
-                        }
+                      onClick={async () => {
+                        const ok = await confirmDialog({
+                          title: "領収書の削除",
+                          message: "この領収書を削除しますか？",
+                        });
+                        if (ok) onDelete(receipt.id);
                       }}
                       className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       title="削除"
