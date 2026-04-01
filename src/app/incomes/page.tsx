@@ -23,6 +23,7 @@ export default function IncomesPage() {
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Income | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<Income | null>(null);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -96,13 +97,21 @@ export default function IncomesPage() {
     setShowModal(true);
   };
 
+  const handleDuplicate = (income: Income) => {
+    setEditTarget(null);
+    setDuplicateTarget(income);
+    setShowModal(true);
+  };
+
   const handleCloseModal = () => {
     setShowModal(false);
     setEditTarget(null);
+    setDuplicateTarget(null);
   };
 
   const handleOpenAddModal = () => {
     setEditTarget(null);
+    setDuplicateTarget(null);
     setShowModal(true);
   };
 
@@ -235,7 +244,7 @@ export default function IncomesPage() {
               </svg>
             </div>
           ) : (
-            <IncomeTable incomes={incomes} onDelete={handleDelete} onEdit={handleEdit} />
+            <IncomeTable incomes={incomes} onDelete={handleDelete} onEdit={handleEdit} onDuplicate={handleDuplicate} />
           )}
           <Pagination
             currentPage={page}
@@ -253,6 +262,7 @@ export default function IncomesPage() {
         onSubmit={editTarget ? handleUpdate : handleAdd}
         clients={clients}
         editTarget={editTarget}
+        duplicateTarget={duplicateTarget}
       />
     </>
   );

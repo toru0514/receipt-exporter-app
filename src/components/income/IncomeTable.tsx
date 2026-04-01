@@ -8,9 +8,10 @@ interface IncomeTableProps {
   incomes: Income[];
   onDelete?: (id: string) => void;
   onEdit?: (income: Income) => void;
+  onDuplicate?: (income: Income) => void;
 }
 
-export default function IncomeTable({ incomes, onDelete, onEdit }: IncomeTableProps) {
+export default function IncomeTable({ incomes, onDelete, onEdit, onDuplicate }: IncomeTableProps) {
   const confirmDialog = useConfirm();
   if (incomes.length === 0) {
     return (
@@ -99,6 +100,17 @@ export default function IncomeTable({ incomes, onDelete, onEdit }: IncomeTablePr
               </td>
               <td className="px-4 py-3 text-center">
                 <div className="flex items-center justify-center gap-2">
+                  {onDuplicate && (
+                    <button
+                      onClick={() => onDuplicate(income)}
+                      className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                      title="複製"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  )}
                   {onEdit && (
                     <button
                       onClick={() => onEdit(income)}

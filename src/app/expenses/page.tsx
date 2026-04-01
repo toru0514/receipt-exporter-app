@@ -23,6 +23,7 @@ export default function ExpensesPage() {
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<Expense | null>(null);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -93,13 +94,21 @@ export default function ExpensesPage() {
     setShowModal(true);
   };
 
+  const handleDuplicate = (expense: Expense) => {
+    setEditTarget(null);
+    setDuplicateTarget(expense);
+    setShowModal(true);
+  };
+
   const handleCloseModal = () => {
     setShowModal(false);
     setEditTarget(null);
+    setDuplicateTarget(null);
   };
 
   const handleOpenAddModal = () => {
     setEditTarget(null);
+    setDuplicateTarget(null);
     setShowModal(true);
   };
 
@@ -232,7 +241,7 @@ export default function ExpensesPage() {
               </svg>
             </div>
           ) : (
-            <ExpenseTable expenses={expenses} onDelete={handleDelete} onEdit={handleEdit} />
+            <ExpenseTable expenses={expenses} onDelete={handleDelete} onEdit={handleEdit} onDuplicate={handleDuplicate} />
           )}
           <Pagination
             currentPage={page}
@@ -250,6 +259,7 @@ export default function ExpensesPage() {
         onSubmit={editTarget ? handleUpdate : handleAdd}
         payees={payees}
         editTarget={editTarget}
+        duplicateTarget={duplicateTarget}
       />
     </>
   );
